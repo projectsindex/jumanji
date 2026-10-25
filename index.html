@@ -1,181 +1,731 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="es">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ecosistema</title>
+    <meta name="theme-color" content="#090d0b">
+    <meta name="description" content="una terminal que es un juego. entra al ecosistema.">
+    <title>jumanji / ecosistema</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
     <link rel="stylesheet" href="estilos.css">
 </head>
 <body data-tema="clasico">
-    <div id="loader">
+    <div id="loader" role="status" aria-live="polite">
+        <div class="loader-mark" aria-hidden="true">⌁</div>
         <div class="loader-text">inicializando ecosistema...</div>
-        <div class="loader-dots">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-        </div>
+        <div class="loader-route"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="loader-dots"><i></i><i></i><i></i></div>
     </div>
 
-    <div id="terminal-container"></div>
-    <div id="pulso"></div>
+    <main class="cabinet" id="cabinet" aria-label="consola del ecosistema">
+        <header class="cabinet-header">
+            <a class="brand" href="#consola" data-vista="consola" aria-label="volver a la consola">
+                <span class="brand-glyph" aria-hidden="true">⌘</span>
+                <span class="brand-copy"><strong>jumanji</strong><small>terminal de acceso · ecosistema</small></span>
+            </a>
+            <div class="header-live">
+                <span class="led" aria-hidden="true"></span>
+                <span id="estado-enlace">esperando señal</span>
+                <span class="separator">/</span>
+                <span id="reloj-maquina">nodo 07</span>
+            </div>
+            <div class="cabinet-mark" aria-hidden="true">EC0-07</div>
+        </header>
+
+        <nav class="nav-tabs" aria-label="compartimentos">
+            <button type="button" class="nav-tab is-active" data-vista="consola" disabled>
+                <span class="tab-index">01</span><span>consola</span><kbd>F1</kbd>
+            </button>
+            <button type="button" class="nav-tab" data-vista="mapa" disabled>
+                <span class="tab-index">02</span><span>tablero</span><kbd>F2</kbd>
+            </button>
+            <button type="button" class="nav-tab" data-vista="archivo" disabled>
+                <span class="tab-index">03</span><span>archivo</span><kbd>F3</kbd>
+            </button>
+            <button type="button" class="nav-tab" data-vista="gabinete" disabled>
+                <span class="tab-index">04</span><span>gabinete</span><kbd>F4</kbd>
+            </button>
+        </nav>
+
+        <section class="hud" aria-label="estado del ecosistema">
+            <div class="hud-cell hud-location">
+                <span class="hud-label">coordenada actual</span>
+                <strong id="hud-lugar">enlace pendiente</strong>
+                <small id="hud-nombre">el que llegó</small>
+            </div>
+            <div class="hud-cell hud-signal">
+                <span class="hud-label">pulso de red</span>
+                <div class="signal-readout">
+                    <span class="signal-orb" id="signal-orb" aria-hidden="true"><i></i></span>
+                    <strong id="hud-pulso">latente</strong>
+                </div>
+                <small id="hud-cuenta-pulso">esperando un movimiento</small>
+            </div>
+            <div class="hud-cell hud-echo">
+                <span class="hud-label">eco disponible</span>
+                <div class="echo-readout"><span class="eco-glyph" aria-hidden="true">◈</span><strong id="hud-eco">00</strong></div>
+                <small>resonancia acumulada</small>
+            </div>
+            <div class="hud-cell hud-progress">
+                <span class="hud-label">mundos estabilizados</span>
+                <div class="progress-readout"><strong id="hud-mundos">00</strong><span>/ 02</span></div>
+                <div class="progress-track" aria-hidden="true"><i id="hud-progreso"></i></div>
+            </div>
+        </section>
+
+        <div class="stage" id="stage">
+            <!-- CONSOLA: el log persiste como una terminal dentro del gabinete. -->
+            <section class="view view-console is-visible" id="vista-consola" aria-label="consola">
+                <div class="console-layout">
+                    <section class="console-card" aria-label="terminal de la máquina">
+                        <div class="console-titlebar">
+                            <div class="titlebar-left">
+                                <span class="window-lights" aria-hidden="true"><i></i><i></i><i></i></span>
+                                <span class="console-path">/ecosistema/<b id="console-path">nodo-07</b></span>
+                            </div>
+                            <div class="console-live"><span class="led" aria-hidden="true"></span><span>conectado</span></div>
+                        </div>
+                        <div class="console-screen">
+                            <div class="screen-grid" aria-hidden="true"></div>
+                            <div id="terminal-container" aria-label="log y entrada de la terminal"></div>
+                            <div class="screen-corner screen-corner-tl" aria-hidden="true"></div>
+                            <div class="screen-corner screen-corner-br" aria-hidden="true"></div>
+                        </div>
+                        <div class="console-footer">
+                            <span><i class="mini-led" aria-hidden="true"></i> log local <b>·</b> entrada activa</span>
+                            <span class="console-shortcuts"><kbd>↑</kbd><kbd>↓</kbd> historial <b>·</b> <kbd>ctrl</kbd>+<kbd>l</kbd> limpiar</span>
+                        </div>
+                    </section>
+
+                    <aside class="side-rail" aria-label="estado de la partida">
+                        <section class="rail-card board-preview">
+                            <div class="rail-heading"><span>cartografía</span><span class="rail-code">A—07</span></div>
+                            <div class="mini-route" aria-hidden="true">
+                                <i class="route-line"></i>
+                                <span class="route-node route-node-hub" id="mini-nodo"><i></i></span>
+                                <span class="route-node route-node-clear" id="mini-claro"><i></i></span>
+                                <span class="route-node route-node-library" id="mini-biblioteca"><i></i></span>
+                            </div>
+                            <div class="mini-route-labels"><span>nodo</span><span>claro</span><span>archivo</span></div>
+                            <button type="button" class="text-link" data-vista="mapa" disabled>abrir tablero <span aria-hidden="true">↗</span></button>
+                        </section>
+
+                        <section class="rail-card verbs-card">
+                            <div class="rail-heading"><span>vocabulario</span><span class="rail-count" id="verb-count">00</span></div>
+                            <p class="rail-caption">lo que podés hacer modifica la ruta.</p>
+                            <div class="verb-chip-list" id="verb-chip-list"><span class="verb-chip">mirar</span></div>
+                            <button type="button" class="text-link" data-vista="gabinete" disabled>ir al gabinete <span aria-hidden="true">↗</span></button>
+                        </section>
+
+                        <section class="rail-card field-card" id="field-card">
+                            <span class="field-label"><i class="field-dot" aria-hidden="true"></i> interferencia</span>
+                            <p id="field-message">la señal todavía no sabe qué estás buscando.</p>
+                            <div class="field-scan" aria-hidden="true"><i></i></div>
+                        </section>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- TABLERO: mundos como casillas conectadas, no como comandos escondidos. -->
+            <section class="view view-board" id="vista-mapa" aria-label="tablero de mundos" hidden>
+                <div class="view-heading">
+                    <div><span class="overline">compartimento 02 / navegación</span><h1>el tablero</h1><p>los lugares abiertos permanecen en tu mapa. elegí una casilla para entrar.</p></div>
+                    <div class="board-total"><span>espacios detectados</span><strong id="board-total">01 <i>/ 04</i></strong></div>
+                </div>
+                <div class="board-canvas">
+                    <svg class="board-routes" viewBox="0 0 1000 270" preserveAspectRatio="none" aria-hidden="true">
+                        <path d="M150 132 C230 132 250 132 330 132"></path>
+                        <path d="M510 132 C600 132 610 132 690 132"></path>
+                        <path d="M850 132 C900 132 900 132 950 132"></path>
+                    </svg>
+                    <div class="world-grid">
+                        <button class="world-card is-open" type="button" data-destino="nodo" disabled>
+                            <span class="world-meta"><span>BASE / 00</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-node" aria-hidden="true"><i></i></span>
+                            <strong>nodo de acceso</strong>
+                            <small>la máquina te vio llegar.</small>
+                            <span class="world-action">estás aquí</span>
+                        </button>
+                        <button class="world-card is-locked" type="button" data-destino="claro" disabled>
+                            <span class="world-meta"><span>MUNDO / 01</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-clear" aria-hidden="true"><i></i><i></i><i></i></span>
+                            <strong>el claro</strong>
+                            <small>tres marcas · una secuencia.</small>
+                            <span class="world-action">señal cerrada</span>
+                        </button>
+                        <button class="world-card is-locked" type="button" data-destino="biblioteca" disabled>
+                            <span class="world-meta"><span>MUNDO / 02</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-library" aria-hidden="true"><i></i><i></i><i></i></span>
+                            <strong>biblioteca subterránea 7</strong>
+                            <small>tres registros se contradicen.</small>
+                            <span class="world-action">sin acceso</span>
+                        </button>
+                        <div class="world-card world-future" aria-label="mundo futuro, señal no detectada">
+                            <span class="world-meta"><span>MUNDO / ??</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-static" aria-hidden="true">···</span>
+                            <strong>señal sin nombre</strong>
+                            <small>hay algo detrás del ruido.</small>
+                            <span class="world-action">no cartografiado</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="board-note"><span class="note-marker">⌁</span><p id="board-message">un mapa no es una instrucción. es una promesa de distancia.</p><span class="board-coordinate">lat. 00°07 / eco</span></div>
+            </section>
+
+            <!-- ARCHIVO: progreso y recompensas, fuera del log de la consola. -->
+            <section class="view view-archive" id="vista-archivo" aria-label="archivo de ecos" hidden>
+                <div class="view-heading">
+                    <div><span class="overline">compartimento 03 / memoria</span><h1>archivo de ecos</h1><p>lo que el mundo dejó en tu sistema. las salidas no se escriben en el log.</p></div>
+                    <div class="archive-stamp"><span>memoria local</span><strong id="archive-count">00</strong></div>
+                </div>
+                <div class="archive-collections">
+                    <section class="collection-card">
+                        <div class="collection-heading"><span>lenguaje adquirido</span><strong id="archive-verb-count">00</strong></div>
+                        <div class="archive-verb-list" id="archive-verbs"></div>
+                    </section>
+                    <section class="collection-card">
+                        <div class="collection-heading"><span>lugares en el registro</span><strong id="archive-world-count">00</strong></div>
+                        <div class="archive-world-list" id="archive-worlds"></div>
+                    </section>
+                </div>
+                <div class="archive-layout">
+                    <div class="archive-list" id="archive-list">
+                        <div class="archive-empty"><span aria-hidden="true">∅</span><strong>todavía no hay archivos</strong><p>al estabilizar un mundo, algo cruza de vuelta con vos.</p></div>
+                    </div>
+                    <aside class="archive-side">
+                        <span class="overline">nota del sistema</span>
+                        <p>Los archivos se descargan a tu equipo cuando los pedís. La terminal del navegador no puede escribir por su cuenta en <code>~/.jumanji/</code>.</p>
+                        <div class="archive-line"></div>
+                        <span class="archive-small">SISTEMA DE SALIDAS / ECO-07</span>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- GABINETE: metajuego de verbos y controles, sin ensuciar el log. -->
+            <section class="view view-cabinet" id="vista-gabinete" aria-label="gabinete de verbos" hidden>
+                <div class="view-heading">
+                    <div><span class="overline">compartimento 04 / intercambio</span><h1>el gabinete</h1><p>el eco no compra objetos. compra maneras nuevas de tocar el mundo.</p></div>
+                    <div class="cabinet-wallet"><span>saldo</span><strong><i aria-hidden="true">◈</i> <b id="cabinet-eco">00</b> eco</strong></div>
+                </div>
+                <div class="cabinet-layout">
+                    <div class="verb-market" id="verb-market"></div>
+                    <aside class="cabinet-sidebar">
+                        <span class="overline">regla de intercambio</span>
+                        <p>Los verbos se ganan primero. Después, la máquina los pone en circulación por una cantidad de eco.</p>
+                        <p class="cabinet-whisper">no compres lo que todavía no sabés para qué sirve.</p>
+                        <div class="cabinet-message" id="cabinet-message" aria-live="polite">la ranura está despierta.</div>
+                    </aside>
+                </div>
+                <div class="controls-strip">
+                    <span><kbd>F1</kbd> volver a consola</span><span><kbd>F2</kbd> tablero</span><span><kbd>F3</kbd> archivo</span><span><kbd>F4</kbd> gabinete</span><span><kbd>ESC</kbd> cerrar compartimento</span>
+                </div>
+            </section>
+        </div>
+
+        <footer class="cabinet-footer">
+            <span>ECOSISTEMA <b>·</b> terminal de tránsito <b>·</b> una puerta, no un cuarto</span>
+            <span id="footer-state">la máquina está escuchando</span>
+            <span class="footer-version">BUILD 0.3 / PY-07</span>
+        </footer>
+    </main>
+
+    <div class="travel-flash" id="travel-flash" aria-hidden="true"><div class="travel-flash-inner"><span>reconfigurando ruta</span><i>· · ·</i></div></div>
+    <div id="pulso" aria-hidden="true"></div>
 
     <script>
-        // Si algún CDN falla antes de que el juego despierte,
-        // que el loader al menos lo diga.
         window.addEventListener('error', function () {
             if (window.__ecoListo) return;
-            var t = document.querySelector('.loader-text');
+            const t = document.querySelector('.loader-text');
             if (t) t.textContent = 'error al despertar. recargá la página.';
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
-
     <script>
-        // Temas de xterm. Los colores ANSI (amarillo/rojo/verde) se
-        // definen por tema para que se lean bien en todos, incluso papel.
         const TEMAS = {
-            clasico:  { background: '#000000', foreground: '#00ff00', cursor: '#00ff00',
-                        selectionBackground: '#004400',
-                        red: '#ff4444', yellow: '#ffff00', green: '#00aa00', brightGreen: '#00ff00' },
-            amanecer: { background: '#1a1a2e', foreground: '#ff9a3c', cursor: '#ff9a3c',
-                        selectionBackground: '#4a2a4e',
-                        red: '#ff6b6b', yellow: '#ffd93c', green: '#a8e063', brightGreen: '#c6ff8a' },
-            bosque:   { background: '#0a1a0a', foreground: '#7fff7f', cursor: '#7fff7f',
-                        selectionBackground: '#1e4020',
-                        red: '#ff7a6b', yellow: '#e6e27a', green: '#4caf50', brightGreen: '#7fff7f' },
-            oceano:   { background: '#001a33', foreground: '#66ccff', cursor: '#66ccff',
-                        selectionBackground: '#0a3355',
-                        red: '#ff7a7a', yellow: '#ffe27a', green: '#3fd97f', brightGreen: '#7dffb0' },
-            papel:    { background: '#f5f5dc', foreground: '#1a1a1a', cursor: '#1a1a1a',
-                        selectionBackground: '#d8d4a8',
-                        red: '#c62828', yellow: '#b58900', green: '#2e7d32', brightGreen: '#388e3c' }
+            clasico:  { background: '#060a07', foreground: '#c8ffd8', cursor: '#b4ffc9',
+                        cursorAccent: '#060a07', selectionBackground: '#19452b',
+                        black: '#101812', red: '#ff746c', green: '#55d98a', yellow: '#eedb78',
+                        blue: '#6bb3a0', magenta: '#ce9afa', cyan: '#70d9ce', white: '#d9ffe4',
+                        brightBlack: '#53665a', brightRed: '#ff9488', brightGreen: '#93ffac',
+                        brightYellow: '#fff2a1', brightBlue: '#9ddcc9', brightMagenta: '#dfb7ff',
+                        brightCyan: '#9efff0', brightWhite: '#f0fff4' },
+            amanecer: { background: '#171322', foreground: '#f8bd8a', cursor: '#ffb36f',
+                        cursorAccent: '#171322', selectionBackground: '#4d3453',
+                        black: '#191522', red: '#ff6f79', green: '#a9df84', yellow: '#ffda83',
+                        blue: '#77a8dd', magenta: '#e09aca', cyan: '#79d7d1', white: '#f2dbcf',
+                        brightBlack: '#6c5c72', brightRed: '#ff9b99', brightGreen: '#c3f5a4',
+                        brightYellow: '#ffe9ad', brightBlue: '#a4caff', brightMagenta: '#f8b9df',
+                        brightCyan: '#9af1e6', brightWhite: '#fff5ef' },
+            bosque:   { background: '#07110d', foreground: '#b9e9c2', cursor: '#8ee3a1',
+                        cursorAccent: '#07110d', selectionBackground: '#234b34',
+                        black: '#0d1711', red: '#ff8376', green: '#69c98a', yellow: '#d4d783',
+                        blue: '#76aa8e', magenta: '#c68eb9', cyan: '#69d2bd', white: '#d8eedb',
+                        brightBlack: '#52665a', brightRed: '#ffaaa0', brightGreen: '#a1efad',
+                        brightYellow: '#edf1a3', brightBlue: '#a6d3b3', brightMagenta: '#e1afd1',
+                        brightCyan: '#9cf1da', brightWhite: '#f0fff1' },
+            oceano:   { background: '#071420', foreground: '#b8e7fa', cursor: '#79d7f2',
+                        cursorAccent: '#071420', selectionBackground: '#1e4760',
+                        black: '#0b1820', red: '#ff827d', green: '#61d7bd', yellow: '#edda85',
+                        blue: '#6faee0', magenta: '#c093e5', cyan: '#5ac7dc', white: '#d8f4fa',
+                        brightBlack: '#506878', brightRed: '#ffaaa0', brightGreen: '#9ef4d5',
+                        brightYellow: '#fff0a8', brightBlue: '#a1d6ff', brightMagenta: '#ddbbff',
+                        brightCyan: '#9cf0ff', brightWhite: '#f2fdff' },
+            papel:    { background: '#eee9dc', foreground: '#27372e', cursor: '#426a4e',
+                        cursorAccent: '#eee9dc', selectionBackground: '#c6d4c1',
+                        black: '#222a25', red: '#a93d39', green: '#337447', yellow: '#886822',
+                        blue: '#396c91', magenta: '#82528a', cyan: '#267c75', white: '#dfd8c7',
+                        brightBlack: '#777a6e', brightRed: '#c45149', brightGreen: '#39834f',
+                        brightYellow: '#997931', brightBlue: '#45799c', brightMagenta: '#9865a0',
+                        brightCyan: '#348c82', brightWhite: '#fffaf0' }
         };
 
-        // La luz que dejaste la última vez, antes de que Python despierte.
+        const LOCALES = {
+            nodo: 'nodo-07', claro: 'el-claro', biblioteca: 'biblioteca-subterranea-7'
+        };
+
         function temaGuardado() {
             try {
                 const crudo = localStorage.getItem('ecosistema_estado');
                 if (!crudo) return 'clasico';
-                const t = JSON.parse(crudo).tema;
-                return TEMAS[t] ? t : 'clasico';
-            } catch (e) {
-                return 'clasico';
-            }
+                const tema = JSON.parse(crudo).tema;
+                return TEMAS[tema] ? tema : 'clasico';
+            } catch (_error) { return 'clasico'; }
         }
 
         const temaInicial = temaGuardado();
-        document.body.setAttribute('data-tema', temaInicial);
+        document.body.dataset.tema = temaInicial;
 
         const term = new Terminal({
             cursorBlink: true,
-            fontSize: 16,
-            fontFamily: "'Courier New', Courier, monospace",
-            theme: TEMAS[temaInicial],
-            scrollback: 1000
+            cursorStyle: 'bar',
+            convertEol: true,
+            fontSize: window.matchMedia('(max-width: 700px)').matches ? 13 : 15,
+            fontFamily: "'Courier New', 'Lucida Console', monospace",
+            fontWeight: '400',
+            fontWeightBold: '600',
+            lineHeight: 1.35,
+            scrollback: 1800,
+            allowTransparency: true,
+            theme: TEMAS[temaInicial]
         });
         const fitAddon = new FitAddon.FitAddon();
         term.loadAddon(fitAddon);
         term.open(document.getElementById('terminal-container'));
         fitAddon.fit();
-        window.addEventListener('resize', () => fitAddon.fit());
-        document.addEventListener('click', () => term.focus());
 
-        // ------------------------------------------------------
-        // Puente eco_*: lo único que Python conoce del navegador
-        // ------------------------------------------------------
+        window.addEventListener('resize', () => requestAnimationFrame(() => fitAddon.fit()));
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('#terminal-container, .nav-tab, .text-link, .world-card, .verb-buy')) return;
+            if (document.getElementById('vista-consola').classList.contains('is-visible')) term.focus();
+        });
 
-        // escritura cruda, sin salto de línea (eco de teclas, prompt)
-        window.eco_write = function (texto) {
-            term.write(texto);
+        // Puente mínimo: Python no conoce el DOM ni xterm.
+        window.eco_write = (texto) => term.write(String(texto));
+        window.eco_writeln = (texto, estilo) => {
+            const colores = { sistema: 33, error: 31, exito: 92, eco: 96, tenue: 90 };
+            const color = colores[estilo];
+            term.writeln(color ? `\x1b[${color}m${texto}\x1b[0m` : String(texto));
         };
-
-        // una línea completa, con estilo
-        window.eco_writeln = function (texto, estilo) {
-            if (estilo === 'sistema') {
-                term.writeln('\x1b[33m' + texto + '\x1b[0m');   // amarillo
-            } else if (estilo === 'error') {
-                term.writeln('\x1b[31m' + texto + '\x1b[0m');   // rojo
-            } else if (estilo === 'exito') {
-                term.writeln('\x1b[92m' + texto + '\x1b[0m');   // verde brillante
-            } else {
-                term.writeln(texto);
-            }
-        };
-
-        window.eco_limpiar = function () {
-            term.clear();
-        };
-
-        // devuelve una Promise: Python la espera con `await`
-        window.eco_pausa = function (ms) {
-            return new Promise((resolve) => setTimeout(resolve, ms));
-        };
-
-        window.eco_set_tema = function (tema) {
+        window.eco_limpiar = () => term.clear();
+        window.eco_pausa = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        window.eco_set_tema = (tema) => {
             if (!TEMAS[tema]) return;
-            document.body.setAttribute('data-tema', tema);
+            document.body.dataset.tema = tema;
             term.options.theme = TEMAS[tema];
         };
-
-        // ------------------------------------------------------
-        // arranque
-        // ------------------------------------------------------
+        window.eco_cambiar_vista = (vista) => activarVista(vista);
+        window.eco_evento = (evento) => {
+            if (evento === 'recompensa') {
+                document.body.classList.remove('reward-flash');
+                void document.body.offsetWidth;
+                document.body.classList.add('reward-flash');
+                setTimeout(() => document.body.classList.remove('reward-flash'), 1400);
+            }
+            if (evento === 'transito') activarTransito();
+        };
+        window.eco_pulso = (tipo, ms = 0) => establecerPulso(tipo, Number(ms) || 0);
+        window.eco_estado = (json) => actualizarEstado(JSON.parse(String(json)));
+        window.eco_mensaje_gabinete = (texto, tipo = 'normal') => {
+            const mensaje = document.getElementById('cabinet-message');
+            mensaje.textContent = texto;
+            mensaje.dataset.tipo = tipo;
+        };
 
         let juego = null;
         let listo = false;
         let cola = Promise.resolve();
+        let vistaActual = 'consola';
+        let estadoActual = null;
+        let timerPulso = null;
+        let ultimaDuracionPulso = 0;
 
-        // Las teclas se procesan en fila: una a la vez, sin entreverarse.
+        function activarVista(vista, animar = false) {
+            const permitidas = ['consola', 'mapa', 'archivo', 'gabinete'];
+            if (!permitidas.includes(vista)) return;
+            vistaActual = vista;
+            for (const id of permitidas) {
+                const panel = document.getElementById(`vista-${id}`);
+                const boton = document.querySelector(`.nav-tab[data-vista="${id}"]`);
+                const visible = id === vista;
+                panel.hidden = !visible;
+                panel.classList.toggle('is-visible', visible);
+                boton.classList.toggle('is-active', visible);
+                boton.setAttribute('aria-current', visible ? 'page' : 'false');
+            }
+            document.querySelectorAll('.text-link[data-vista]').forEach((boton) => {
+                boton.setAttribute('aria-pressed', String(boton.dataset.vista === vista));
+            });
+            if (vista === 'consola') {
+                requestAnimationFrame(() => { fitAddon.fit(); term.focus(); });
+            }
+            if (animar) activarTransito();
+        }
+
+        function cambiarVista(vista) {
+            if (!listo || !estadoActual || !estadoActual.autenticado) return;
+            if (vistaActual === 'consola' && juego) {
+                cola = cola.then(() => {
+                    juego.cancelar_linea_ui();
+                    activarVista(vista);
+                }).catch((error) => console.error(error));
+            } else activarVista(vista);
+        }
+
+        function activarTransito() {
+            const flash = document.getElementById('travel-flash');
+            flash.classList.remove('is-active');
+            void flash.offsetWidth;
+            flash.classList.add('is-active');
+            document.body.classList.add('in-transit');
+            setTimeout(() => {
+                flash.classList.remove('is-active');
+                document.body.classList.remove('in-transit');
+            }, 620);
+        }
+
+        function establecerPulso(tipo, ms) {
+            const orb = document.getElementById('signal-orb');
+            const label = document.getElementById('hud-pulso');
+            const cuenta = document.getElementById('hud-cuenta-pulso');
+            const field = document.getElementById('field-card');
+            if (timerPulso) { clearInterval(timerPulso); timerPulso = null; }
+            orb.classList.remove('is-window', 'is-near', 'is-low');
+            if (tipo === 'ventana' && ms > 0) {
+                ultimaDuracionPulso = Date.now() + ms;
+                orb.classList.add('is-window');
+                field.classList.add('has-signal');
+                const tick = () => {
+                    const resta = Math.max(0, ultimaDuracionPulso - Date.now());
+                    label.textContent = resta > 0 ? 'intervalo abierto' : 'latente';
+                    cuenta.textContent = resta > 0 ? `${(resta / 1000).toFixed(1)} s · la ruta está viva` : 'el intervalo volvió a cerrarse';
+                    if (resta <= 0) {
+                        orb.classList.remove('is-window');
+                        field.classList.remove('has-signal');
+                        clearInterval(timerPulso);
+                        timerPulso = null;
+                    }
+                };
+                tick();
+                timerPulso = setInterval(tick, 100);
+            } else {
+                field.classList.remove('has-signal');
+                if (tipo === 'cerca') {
+                    orb.classList.add('is-near');
+                    field.classList.add('has-signal');
+                    label.textContent = 'algo se mueve';
+                    cuenta.textContent = 'hay una acción que el mundo está esperando';
+                } else if (tipo === 'eco') {
+                    orb.classList.add('is-low');
+                    label.textContent = 'resonancia';
+                    cuenta.textContent = 'el mundo dejó una señal';
+                } else {
+                    label.textContent = 'latente';
+                    cuenta.textContent = 'esperando un movimiento';
+                }
+            }
+        }
+
+        function renderVerbos(verbos) {
+            const lista = document.getElementById('verb-chip-list');
+            lista.replaceChildren();
+            for (const verbo of verbos) {
+                const chip = document.createElement('span');
+                chip.className = 'verb-chip';
+                chip.textContent = verbo;
+                lista.appendChild(chip);
+            }
+            document.getElementById('verb-count').textContent = String(verbos.length).padStart(2, '0');
+        }
+
+        const worldInfo = {
+            nodo: { titulo: 'nodo de acceso', numero: '00', cualidad: 'BASE' },
+            claro: { titulo: 'el claro', numero: '01', cualidad: 'MUNDO' },
+            biblioteca: { titulo: 'biblioteca subterránea 7', numero: '02', cualidad: 'MUNDO' }
+        };
+
+        function renderMapa(estado) {
+            const abierto = new Set(estado.ubicaciones_abiertas || ['nodo']);
+            const completos = new Set(estado.mundos || []);
+            for (const boton of document.querySelectorAll('.world-card[data-destino]')) {
+                const id = boton.dataset.destino;
+                const disponible = abierto.has(id);
+                const actual = estado.lugar === id;
+                const completo = completos.has(id);
+                boton.disabled = !disponible || actual;
+                boton.classList.toggle('is-locked', !disponible);
+                boton.classList.toggle('is-open', disponible);
+                boton.classList.toggle('is-current', actual);
+                boton.classList.toggle('is-cleared', completo);
+                const accion = boton.querySelector('.world-action');
+                if (actual) accion.textContent = 'estás aquí';
+                else if (completo) accion.textContent = 'revisitar ↗';
+                else if (disponible) accion.textContent = 'entrar ↗';
+                else if (id === 'claro' && estado.ventana_ms > 0) accion.textContent = 'esperando pulso';
+                else if (id === 'claro') accion.textContent = 'señal cerrada';
+                else accion.textContent = estado.mundos.includes('claro') ? 'falta un verbo' : 'sin acceso';
+            }
+            const total = document.getElementById('board-total');
+            const disponibles = abierto.size;
+            total.innerHTML = `${String(disponibles).padStart(2, '0')} <i>/ 04</i>`;
+            const mini = { nodo: 'mini-nodo', claro: 'mini-claro', biblioteca: 'mini-biblioteca' };
+            for (const [id, elementId] of Object.entries(mini)) {
+                const node = document.getElementById(elementId);
+                node.classList.toggle('is-open', abierto.has(id));
+                node.classList.toggle('is-current', estado.lugar === id);
+                node.classList.toggle('is-cleared', completos.has(id));
+            }
+            const messages = {
+                nodo: 'la máquina te registró como llegada. el primer movimiento todavía no tiene nombre.',
+                claro: 'el tablero no dice qué hacer. las marcas de cada casilla sí.',
+                biblioteca: 'tres registros se contradicen. ninguna puerta se abre por fuerza.'
+            };
+            document.getElementById('board-message').textContent = messages[estado.lugar] || messages.nodo;
+        }
+
+        function renderGabinete(estado) {
+            const shop = document.getElementById('verb-market');
+            shop.replaceChildren();
+            document.getElementById('cabinet-eco').textContent = String(estado.eco).padStart(2, '0');
+            const tiene = (estado.verbos || []).includes('preguntar');
+            const listoParaComprar = (estado.mundos || []).includes('claro');
+            const card = document.createElement('article');
+            card.className = `verb-offer ${tiene ? 'is-installed' : ''}`;
+            const meta = document.createElement('div');
+            meta.className = 'offer-meta';
+            meta.innerHTML = '<span>nuevo verbo / 01</span><span>02 ◈</span>';
+            const title = document.createElement('h2');
+            title.textContent = 'preguntar';
+            const description = document.createElement('p');
+            description.textContent = 'hay lugares que solo responden cuando aprendés a formular la pregunta.';
+            const location = document.createElement('div');
+            location.className = 'offer-unlocks';
+            location.innerHTML = '<span class="offer-arrow">↳</span><span>abre la biblioteca subterránea 7</span>';
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'verb-buy';
+            button.dataset.verbo = 'preguntar';
+            button.disabled = tiene || !listoParaComprar || estado.eco < 2;
+            if (tiene) button.textContent = 'instalado ✓';
+            else if (!listoParaComprar) button.textContent = 'la señal todavía no llegó';
+            else if (estado.eco < 2) button.textContent = 'faltan ecos';
+            else button.textContent = 'intercambiar · 2 eco';
+            button.addEventListener('click', () => comprarVerbo('preguntar'));
+            card.append(meta, title, description, location, button);
+            shop.appendChild(card);
+            if (!listoParaComprar && !tiene) {
+                const locked = document.createElement('div');
+                locked.className = 'market-locked';
+                locked.innerHTML = '<span aria-hidden="true">···</span><p>la máquina todavía no ofrece otras palabras.</p>';
+                shop.appendChild(locked);
+            }
+        }
+
+        function renderArchivo(estado) {
+            const verbos = estado.verbos || [];
+            const verbList = document.getElementById('archive-verbs');
+            verbList.replaceChildren();
+            document.getElementById('archive-verb-count').textContent = String(verbos.length).padStart(2, '0');
+            for (const verbo of verbos) {
+                const chip = document.createElement('span');
+                chip.className = 'archive-verb-chip';
+                chip.textContent = verbo;
+                verbList.appendChild(chip);
+            }
+
+            const abiertos = new Set(estado.ubicaciones_abiertas || ['nodo']);
+            const completos = new Set(estado.mundos || []);
+            const worldList = document.getElementById('archive-worlds');
+            worldList.replaceChildren();
+            document.getElementById('archive-world-count').textContent = String(abiertos.size).padStart(2, '0');
+            for (const id of ['nodo', 'claro', 'biblioteca']) {
+                const entry = document.createElement('span');
+                entry.className = 'archive-world-entry';
+                if (abiertos.has(id)) entry.classList.add('is-open');
+                if (completos.has(id)) entry.classList.add('is-complete');
+                if (estado.lugar === id) entry.classList.add('is-current');
+                const led = document.createElement('i');
+                const label = document.createElement('span');
+                label.textContent = `${worldInfo[id].numero} / ${worldInfo[id].titulo}`;
+                entry.append(led, label);
+                worldList.appendChild(entry);
+            }
+
+            const lista = document.getElementById('archive-list');
+            const salidas = estado.salidas || [];
+            document.getElementById('archive-count').textContent = String(salidas.length).padStart(2, '0');
+            lista.replaceChildren();
+            if (!salidas.length) {
+                const empty = document.createElement('div');
+                empty.className = 'archive-empty';
+                empty.innerHTML = '<span aria-hidden="true">∅</span><strong>todavía no hay archivos</strong><p>al estabilizar un mundo, algo cruza de vuelta con vos.</p>';
+                lista.appendChild(empty);
+                return;
+            }
+            const salidasData = {
+                'eco_mundo_01.txt': {
+                    title: 'el claro / salida 01',
+                    text: `ECO DEL CLARO\n\nno fue la semilla quien abrió el camino.\nfue el orden que le diste a las cosas.\n\nla piedra se movió.\nla semilla recordó su forma.\nel agua se llevó el resto.\n\n— registro 01 / ecosistema\n`
+                },
+                'eco_mundo_02.txt': {
+                    title: 'biblioteca subterránea 7 / salida 02',
+                    text: `ECO DE LA BIBLIOTECA SUBTERRÁNEA 7\n\nuna cosa llega antes.\notra no sabe que la está siguiendo.\ny la última cree que llegó sola.\n\norden reconstruido: semilla · eco · agua\n\n— registro 02 / ecosistema\n`
+                }
+            };
+            for (const archivo of salidas) {
+                const salida = salidasData[archivo];
+                if (!salida) continue;
+                const row = document.createElement('article');
+                row.className = 'archive-file';
+                const icon = document.createElement('span');
+                icon.className = 'file-icon';
+                icon.textContent = 'TXT';
+                const copy = document.createElement('div');
+                copy.className = 'file-copy';
+                const title = document.createElement('strong');
+                title.textContent = salida.title;
+                const filename = document.createElement('small');
+                filename.textContent = archivo;
+                copy.append(title, filename);
+                const download = document.createElement('button');
+                download.type = 'button';
+                download.className = 'download-button';
+                download.textContent = 'descargar ↓';
+                download.addEventListener('click', () => descargar(archivo, salida.text));
+                row.append(icon, copy, download);
+                lista.appendChild(row);
+            }
+        }
+
+        function actualizarEstado(estado) {
+            estadoActual = estado;
+            const autenticado = Boolean(estado.autenticado);
+            for (const button of document.querySelectorAll('.nav-tab, .text-link[data-vista]')) {
+                button.disabled = !autenticado;
+            }
+            document.getElementById('hud-lugar').textContent = estado.etiqueta_lugar || 'enlace pendiente';
+            document.getElementById('hud-nombre').textContent = estado.nombre || 'el que llegó';
+            document.getElementById('console-path').textContent = LOCALES[estado.lugar] || 'nodo-07';
+            document.getElementById('footer-state').textContent = estado.autenticado ? 'la máquina está escuchando' : 'terminal en espera';
+            document.getElementById('estado-enlace').textContent = estado.autenticado ? 'enlace estable' : 'esperando señal';
+            document.getElementById('hud-eco').textContent = String(estado.eco || 0).padStart(2, '0');
+            const cantidad = (estado.mundos || []).length;
+            document.getElementById('hud-mundos').textContent = String(cantidad).padStart(2, '0');
+            document.getElementById('hud-progreso').style.width = `${Math.min(100, cantidad * 50)}%`;
+            document.getElementById('field-message').textContent = estado.indicio || 'la señal todavía no sabe qué estás buscando.';
+            document.getElementById('field-card').classList.toggle('has-signal', estado.pulso === 'cerca' || estado.pulso === 'ventana');
+            renderVerbos(estado.verbos || ['mirar']);
+            renderMapa(estado);
+            renderGabinete(estado);
+            renderArchivo(estado);
+            if (estado.pulso === 'ventana' && estado.ventana_ms > 0) establecerPulso('ventana', estado.ventana_ms);
+            else if (estado.pulso === 'cerca') establecerPulso('cerca', 0);
+            else if (estado.pulso === 'eco') establecerPulso('eco', 0);
+            else establecerPulso('latente', 0);
+        }
+
+        function comprarVerbo(verbo) {
+            if (!listo || !juego) return;
+            cola = cola.then(() => juego.comprar_verbo_ui(verbo)).catch((error) => console.error(error));
+        }
+
+        function descargar(nombre, contenido) {
+            const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+            const enlace = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            enlace.href = url;
+            enlace.download = nombre;
+            document.body.appendChild(enlace);
+            enlace.click();
+            enlace.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        document.querySelectorAll('[data-vista]').forEach((boton) => {
+            boton.addEventListener('click', (event) => {
+                event.preventDefault();
+                cambiarVista(boton.dataset.vista);
+            });
+        });
+        document.querySelectorAll('.world-card[data-destino]').forEach((boton) => {
+            boton.addEventListener('click', () => viajarA(boton.dataset.destino));
+        });
+        function viajarA(destino) {
+            if (!listo || !juego) return;
+            const button = document.querySelector(`.world-card[data-destino="${destino}"]`);
+            if (!button || button.disabled) return;
+            activarVista('consola', true);
+            cola = cola.then(() => juego.viajar_a(destino)).catch((error) => console.error(error));
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && vistaActual !== 'consola') {
+                event.preventDefault();
+                cambiarVista('consola');
+                return;
+            }
+            const atajos = { F1: 'consola', F2: 'mapa', F3: 'archivo', F4: 'gabinete' };
+            if (atajos[event.key] && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                event.preventDefault();
+                cambiarVista(atajos[event.key]);
+            }
+        });
+
+        let pyodide;
         term.onData((data) => {
             if (!listo || !juego) return;
-            cola = cola
-                .then(() => juego.procesar_input(data))
-                .catch((err) => console.error(err));
+            cola = cola.then(() => juego.procesar_input(data)).catch((error) => console.error(error));
         });
 
         async function iniciar() {
             try {
-                window.eco_writeln('cargando motor...', 'sistema');
-                const pyodide = await loadPyodide();
-                window.eco_writeln('motor cargado.', 'sistema');
-
+                window.eco_writeln('conectando al nodo 07...', 'sistema');
+                pyodide = await loadPyodide();
+                window.eco_writeln('motor python disponible.', 'sistema');
                 const respuesta = await fetch('juego.py');
-                if (!respuesta.ok) {
-                    throw new Error(
-                        'no se pudo leer juego.py (HTTP ' + respuesta.status +
-                        '). ¿está subido junto a index.html?'
-                    );
-                }
+                if (!respuesta.ok) throw new Error(`no se pudo leer juego.py (HTTP ${respuesta.status}).`);
                 const codigo = await respuesta.text();
                 await pyodide.runPythonAsync(codigo);
-
                 const Juego = pyodide.globals.get('Juego');
                 juego = Juego();
-
                 window.eco_limpiar();
                 await juego.iniciar();
-
                 listo = true;
                 window.__ecoListo = true;
-                document.getElementById('loader').style.display = 'none';
-                fitAddon.fit();
+                document.getElementById('loader').classList.add('is-done');
+                setTimeout(() => document.getElementById('loader').remove(), 450);
+                requestAnimationFrame(() => fitAddon.fit());
                 term.focus();
             } catch (error) {
                 console.error(error);
-                document.getElementById('loader').style.display = 'none';
-                window.eco_writeln('');
-                window.eco_writeln('la máquina no pudo despertar.', 'error');
-                window.eco_writeln('error: ' + error.message, 'error');
-                window.eco_writeln(
-                    'revisá tu conexión, recargá la página e intentá de nuevo.',
-                    'sistema'
-                );
+                document.getElementById('loader').classList.add('is-error');
+                const texto = document.querySelector('.loader-text');
+                texto.textContent = `la máquina no pudo despertar: ${error.message}`;
+                const dots = document.querySelector('.loader-dots');
+                dots.innerHTML = '<button type="button" onclick="location.reload()">reintentar</button>';
             }
         }
-
         iniciar();
     </script>
 </body>
