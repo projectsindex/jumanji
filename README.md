@@ -52,7 +52,7 @@ Hace falta conexión a internet para cargar xterm.js y Pyodide desde CDN.
 
 ## publicar en GitHub Pages
 
-En este repo, Pages sirve desde `main` en `/`. Cada push a `main` republica `https://projectsindex.github.io/jumanji/`.
+Ahora, durante la prueba del PR #1, Pages sirve la rama `arena/d3afdbaf-jumanji` desde `/`; el último build figura como `built` en https://projectsindex.github.io/jumanji/. Después de integrar los cambios, si querés que los siguientes despliegues sigan a `main`, elegí `main` y `/(root)` en **Settings → Pages**.
 
 Para otro repo: **Settings → Pages → Deploy from a branch**, elegí la rama y `/(root)`. `.nojekyll` evita que Pages procese los archivos como Jekyll.
 
