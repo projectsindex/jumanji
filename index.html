@@ -10,7 +10,11 @@
 <body data-tema="clasico">
     <div id="loader">
         <div class="loader-text">inicializando ecosistema...</div>
-        <div class="loader-bar"></div>
+        <div class="loader-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
     </div>
     
     <div id="terminal-container"></div>
@@ -23,6 +27,7 @@
         let term;
         let pyodide;
         let juegoReady = false;
+        let juego;
         
         // Inicializar terminal
         term = new Terminal({
@@ -36,6 +41,192 @@
         });
         term.open(document.getElementById('terminal-container'));
         
+        // Código Python embebido
+        const codigoPython = `
+from js import window
+import json
+import asyncio
+
+class Juego:
+    def __init__(self):
+        self.estado = "INICIO"
+        self.nombre = None
+        self.palabra_semilla = None
+        self.verbos_desbloqueados = ["mirar"]
+        self.mundos_completados = []
+        self.buffer_input = ""
+        self.ultimo_tiempo = 0
+        
+    async def iniciar(self):
+        await self.cargar_estado()
+        
+        if self.nombre:
+            self.escribir(f"hola de nuevo, {self.nombre}.", "exito")
+            self.escribir("el ecosistema te recuerda.")
+        else:
+            await self.login()
+        
+        self.estado = "CONSOLA"
+        self.mostrar_prompt()
+    
+    async def login(self):
+        self.escribir("╔══════════════════════════════════════╗")
+        self.escribir("║       ECOSISTEMA v0.1                ║")
+        self.escribir("║       nodo de acceso                 ║")
+        self.escribir("╚══════════════════════════════════════╝")
+        self.escribir("")
+        self.escribir("para que la ruta no se pierda en el vacío,", "sistema")
+        self.escribir("necesitás una palabra de anclaje.", "sistema")
+        self.escribir("elegí una frase corta. algo que solo vos sepas.", "sistema")
+        self.escribir("no la anotes en ningún lado. memorizala.", "sistema")
+        self.escribir("")
+        self.escribir("si algún día volvés y la máquina te olvida,", "sistema")
+        self.escribir("esta frase te va a traer de vuelta.", "sistema")
+        self.escribir("")
+        self.escribir("o escribí 'anonimo' para entrar sin anclaje.", "sistema")
+        self.escribir("(si te vas, te vas para siempre.)", "sistema")
+        self.escribir("")
+        self.escribir("¿cuál es tu palabra de anclaje?")
+        self.estado = "LOGIN_ANCLAJE"
+    
+    async def procesar_input(self, data):
+        if data == '\\r':
+            await self.ejecutar_comando()
+        elif data == '\\x7f':
+            if len(self.buffer_input) > 0:
+                self.buffer_input = self.buffer_input[:-1]
+                window.escribirEnTerminal('\\b \\b')
+        elif data == '\\x03':
+            self.buffer_input = ""
+            window.escribirEnTerminal("^C")
+            self.mostrar_prompt()
+        elif ord(data) >= 32:
+            self.buffer_input += data
+            window.escribirEnTerminal(data)
+    
+    async def ejecutar_comando(self):
+        window.escribirEnTerminal("")
+        comando = self.buffer_input.strip().lower()
+        self.buffer_input = ""
+        
+        if not comando:
+            self.mostrar_prompt()
+            return
+        
+        if self.estado == "LOGIN_ANCLAJE":
+            await self.procesar_login(comando)
+        elif self.estado == "CONSOLA":
+            await self.procesar_comando(comando)
+        
+        self.mostrar_prompt()
+    
+    async def procesar_login(self, comando):
+        if comando == "anonimo":
+            self.nombre = "el que llegó"
+            self.palabra_semilla = None
+            self.escribir("entraste sin anclaje.", "sistema")
+            self.escribir("si te vas, te vas para siempre.", "sistema")
+            self.escribir("")
+            self.escribir(f"hola, {self.nombre}.", "exito")
+        else:
+            self.nombre = comando[:20]
+            self.palabra_semilla = comando
+            self.escribir(f"anclaje establecido: {self.nombre}", "exito")
+            self.escribir("la máquina te va a recordar.", "sistema")
+            self.escribir("")
+            self.escribir(f"hola, {self.nombre}.", "exito")
+        
+        self.estado = "CONSOLA"
+        await self.guardar_estado()
+    
+    async def procesar_comando(self, comando):
+        partes = comando.split()
+        verbo = partes[0] if partes else ""
+        
+        if verbo == "mirar":
+            await self.verbo_mirar()
+        elif verbo == "tema":
+            await self.verbo_tema(partes[1] if len(partes) > 1 else None)
+        elif verbo == "verbos":
+            self.escribir("verbos desbloqueados:", "sistema")
+            for v in self.verbos_desbloqueados:
+                self.escribir(f"  • {v}")
+        elif verbo == "ayuda":
+            self.escribir("no hay ayuda. solo hay que mirar.", "sistema")
+            self.escribir("escribí 'verbos' para ver lo que podés hacer.", "sistema")
+        elif verbo == "salir":
+            self.escribir("la máquina te va a esperar.", "sistema")
+            self.escribir("hasta pronto, " + self.nombre + ".", "exito")
+        else:
+            self.escribir(f"no conozco ese movimiento.", "error")
+            self.escribir("mis raíces no llegan tan alto.", "error")
+    
+    async def verbo_mirar(self):
+        self.escribir("mirás a tu alrededor.", "exito")
+        self.escribir("")
+        self.escribir("estás en un nodo del ecosistema.")
+        self.escribir("la terminal parpadea suavemente.")
+        self.escribir("en el borde de tu visión, algo pulsa.")
+        self.escribir("")
+        self.escribir("el primer mundo está cerca.", "sistema")
+        self.escribir("pero primero tenés que aprender a esperar.", "sistema")
+        self.escribir("")
+        
+        if "esperar" not in self.verbos_desbloqueados:
+            self.verbos_desbloqueados.append("esperar")
+            self.escribir("✓ verbo desbloqueado: esperar", "exito")
+            await self.guardar_estado()
+    
+    async def verbo_tema(self, tema):
+        temas_disponibles = ["clasico", "amanecer", "bosque", "oceano", "papel"]
+        
+        if tema is None:
+            self.escribir("temas disponibles:", "sistema")
+            for t in temas_disponibles:
+                self.escribir(f"  • tema {t}")
+        elif tema in temas_disponibles:
+            window.cambiarTema(tema)
+            self.escribir(f"tema cambiado a: {tema}", "exito")
+            await self.guardar_estado()
+        else:
+            self.escribir(f"no conozco ese tema.", "error")
+    
+    def escribir(self, texto, estilo="normal"):
+        window.escribirEnTerminal(texto, estilo)
+    
+    def mostrar_prompt(self):
+        if self.estado == "CONSOLA":
+            window.escribirEnTerminal(f"\\n{self.nombre} > ", "normal")
+        else:
+            window.escribirEnTerminal("> ", "normal")
+    
+    async def guardar_estado(self):
+        estado = {
+            "nombre": self.nombre,
+            "palabra_semilla": self.palabra_semilla,
+            "verbos": self.verbos_desbloqueados,
+            "mundos": self.mundos_completados
+        }
+        js_code = f"localStorage.setItem('ecosistema_estado', JSON.stringify({json.dumps(estado)}))"
+        await window.pyodide.runJavaScriptAsync(js_code)
+    
+    async def cargar_estado(self):
+        try:
+            js_code = "localStorage.getItem('ecosistema_estado')"
+            resultado = await window.pyodide.runJavaScriptAsync(js_code)
+            
+            if resultado and resultado != "null":
+                estado = json.loads(resultado)
+                self.nombre = estado.get("nombre")
+                self.palabra_semilla = estado.get("palabra_semilla")
+                self.verbos_desbloqueados = estado.get("verbos", ["mirar"])
+                self.mundos_completados = estado.get("mundos", [])
+        except:
+            pass
+
+juego = Juego()
+`;
+
         // Loader
         async function iniciar() {
             term.writeln('cargando motor...');
@@ -45,14 +236,14 @@
                 term.writeln('motor cargado.');
                 term.writeln('despertando ecosistema...');
                 
-                // Cargar el juego
-                const response = await fetch('juego.py');
-                const codigo = await response.text();
-                await pyodide.runPythonAsync(codigo);
+                // Ejecutar código Python embebido
+                await pyodide.runPythonAsync(codigoPython);
+                
+                // Obtener referencia al juego
+                juego = pyodide.globals.get('juego');
                 
                 // Inicializar el juego
-                await pyodide.runPythonAsync('juego = Juego()');
-                await pyodide.runPythonAsync('await juego.iniciar()');
+                await juego.iniciar();
                 
                 juegoReady = true;
                 
@@ -66,31 +257,35 @@
                 });
                 
             } catch (error) {
-                term.writeln(`error: ${error.message}`);
+                term.writeln(\\`error crítico: \\${error.message}\\`);
+                term.writeln('');
+                term.writeln('la máquina no pudo despertar.', 'error');
+                term.writeln('recargá la página e intentá de nuevo.', 'sistema');
+                console.error(error);
             }
         }
         
         async function procesarInput(data) {
-            // Pasar el input a Python
-            pyodide.globals.set('input_data', data);
-            await pyodide.runPythonAsync('await juego.procesar_input(input_data)');
+            if (!juego) return;
+            await juego.procesar_input(data);
         }
         
         // Función para que Python escriba en la terminal
         function escribirEnTerminal(texto, estilo = 'normal') {
             if (estilo === 'sistema') {
-                term.writeln(`\x1b[33m${texto}\x1b[0m`); // amarillo
+                term.writeln(\\`\\x1b[33m\\${texto}\\x1b[0m\\`); // amarillo
             } else if (estilo === 'error') {
-                term.writeln(`\x1b[31m${texto}\x1b[0m`); // rojo
+                term.writeln(\\`\\x1b[31m\\${texto}\\x1b[0m\\`); // rojo
             } else if (estilo === 'exito') {
-                term.writeln(`\x1b[32m${texto}\x1b[0m`); // verde
+                term.writeln(\\`\\x1b[32m\\${texto}\\x1b[0m\\`); // verde
             } else {
                 term.writeln(texto);
             }
         }
         
-        // Exponer función a Python
+        // Exponer funciones a Python
         window.escribirEnTerminal = escribirEnTerminal;
+        window.pyodide = pyodide;
         
         // Función para cambiar tema
         function cambiarTema(tema) {
