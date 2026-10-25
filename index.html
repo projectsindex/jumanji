@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ecosistema</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body data-tema="clasico">
+    <div id="loader">
+        <div class="loader-text">inicializando ecosistema...</div>
+        <div class="loader-bar"></div>
+    </div>
+    
+    <div id="terminal-container"></div>
+    <div id="pulso"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    
+    <script>
+        let term;
+        let pyodide;
+        let juegoReady = false;
+        
+        // Inicializar terminal
+        term = new Terminal({
+            cursorBlink: true,
+            fontSize: 16,
+            fontFamily: 'Courier New, monospace',
+            theme: {
+                background: '#000000',
+                foreground: '#00ff00'
+            }
+        });
+        term.open(document.getElementById('terminal-container'));
+        
+        // Loader
+        async function iniciar() {
+            term.writeln('cargando motor...');
+            
+            try {
+                pyodide = await loadPyodide();
+                term.writeln('motor cargado.');
+                term.writeln('despertando ecosistema...');
+                
+                // Cargar el juego
+                const response = await fetch('juego.py');
+                const codigo = await response.text();
+                await pyodide.runPythonAsync(codigo);
+                
+                // Inicializar el juego
+                await pyodide.runPythonAsync('juego = Juego()');
+                await pyodide.runPythonAsync('await juego.iniciar()');
+                
+                juegoReady = true;
+                
+                // Ocultar loader
+                document.getElementById('loader').style.display = 'none';
+                
+                // Configurar input
+                term.onData(async (data) => {
+                    if (!juegoReady) return;
+                    await procesarInput(data);
+                });
+                
+            } catch (error) {
+                term.writeln(`error: ${error.message}`);
+            }
+        }
+        
+        async function procesarInput(data) {
+            // Pasar el input a Python
+            pyodide.globals.set('input_data', data);
+            await pyodide.runPythonAsync('await juego.procesar_input(input_data)');
+        }
+        
+        // Función para que Python escriba en la terminal
+        function escribirEnTerminal(texto, estilo = 'normal') {
+            if (estilo === 'sistema') {
+                term.writeln(`\x1b[33m${texto}\x1b[0m`); // amarillo
+            } else if (estilo === 'error') {
+                term.writeln(`\x1b[31m${texto}\x1b[0m`); // rojo
+            } else if (estilo === 'exito') {
+                term.writeln(`\x1b[32m${texto}\x1b[0m`); // verde
+            } else {
+                term.writeln(texto);
+            }
+        }
+        
+        // Exponer función a Python
+        window.escribirEnTerminal = escribirEnTerminal;
+        
+        // Función para cambiar tema
+        function cambiarTema(tema) {
+            document.body.setAttribute('data-tema', tema);
+        }
+        window.cambiarTema = cambiarTema;
+        
+        // Iniciar
+        iniciar();
+    </script>
+</body>
+</html>
