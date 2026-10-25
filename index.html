@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,284 +16,166 @@
             <span class="dot"></span>
         </div>
     </div>
-    
+
     <div id="terminal-container"></div>
     <div id="pulso"></div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
-    
+
     <script>
-        let term;
-        let pyodide;
-        let juegoReady = false;
-        let juego;
-        
-        // Inicializar terminal
-        term = new Terminal({
+        // Si algún CDN falla antes de que el juego despierte,
+        // que el loader al menos lo diga.
+        window.addEventListener('error', function () {
+            if (window.__ecoListo) return;
+            var t = document.querySelector('.loader-text');
+            if (t) t.textContent = 'error al despertar. recargá la página.';
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+
+    <script>
+        // Temas de xterm. Los colores ANSI (amarillo/rojo/verde) se
+        // definen por tema para que se lean bien en todos, incluso papel.
+        const TEMAS = {
+            clasico:  { background: '#000000', foreground: '#00ff00', cursor: '#00ff00',
+                        selectionBackground: '#004400',
+                        red: '#ff4444', yellow: '#ffff00', green: '#00aa00', brightGreen: '#00ff00' },
+            amanecer: { background: '#1a1a2e', foreground: '#ff9a3c', cursor: '#ff9a3c',
+                        selectionBackground: '#4a2a4e',
+                        red: '#ff6b6b', yellow: '#ffd93c', green: '#a8e063', brightGreen: '#c6ff8a' },
+            bosque:   { background: '#0a1a0a', foreground: '#7fff7f', cursor: '#7fff7f',
+                        selectionBackground: '#1e4020',
+                        red: '#ff7a6b', yellow: '#e6e27a', green: '#4caf50', brightGreen: '#7fff7f' },
+            oceano:   { background: '#001a33', foreground: '#66ccff', cursor: '#66ccff',
+                        selectionBackground: '#0a3355',
+                        red: '#ff7a7a', yellow: '#ffe27a', green: '#3fd97f', brightGreen: '#7dffb0' },
+            papel:    { background: '#f5f5dc', foreground: '#1a1a1a', cursor: '#1a1a1a',
+                        selectionBackground: '#d8d4a8',
+                        red: '#c62828', yellow: '#b58900', green: '#2e7d32', brightGreen: '#388e3c' }
+        };
+
+        // La luz que dejaste la última vez, antes de que Python despierte.
+        function temaGuardado() {
+            try {
+                const crudo = localStorage.getItem('ecosistema_estado');
+                if (!crudo) return 'clasico';
+                const t = JSON.parse(crudo).tema;
+                return TEMAS[t] ? t : 'clasico';
+            } catch (e) {
+                return 'clasico';
+            }
+        }
+
+        const temaInicial = temaGuardado();
+        document.body.setAttribute('data-tema', temaInicial);
+
+        const term = new Terminal({
             cursorBlink: true,
             fontSize: 16,
-            fontFamily: 'Courier New, monospace',
-            theme: {
-                background: '#000000',
-                foreground: '#00ff00'
-            }
+            fontFamily: "'Courier New', Courier, monospace",
+            theme: TEMAS[temaInicial],
+            scrollback: 1000
         });
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
         term.open(document.getElementById('terminal-container'));
-        
-        // Código Python embebido
-        const codigoPython = `
-from js import window
-import json
-import asyncio
+        fitAddon.fit();
+        window.addEventListener('resize', () => fitAddon.fit());
+        document.addEventListener('click', () => term.focus());
 
-class Juego:
-    def __init__(self):
-        self.estado = "INICIO"
-        self.nombre = None
-        self.palabra_semilla = None
-        self.verbos_desbloqueados = ["mirar"]
-        self.mundos_completados = []
-        self.buffer_input = ""
-        self.ultimo_tiempo = 0
-        
-    async def iniciar(self):
-        await self.cargar_estado()
-        
-        if self.nombre:
-            self.escribir(f"hola de nuevo, {self.nombre}.", "exito")
-            self.escribir("el ecosistema te recuerda.")
-        else:
-            await self.login()
-        
-        self.estado = "CONSOLA"
-        self.mostrar_prompt()
-    
-    async def login(self):
-        self.escribir("╔══════════════════════════════════════╗")
-        self.escribir("║       ECOSISTEMA v0.1                ║")
-        self.escribir("║       nodo de acceso                 ║")
-        self.escribir("╚══════════════════════════════════════╝")
-        self.escribir("")
-        self.escribir("para que la ruta no se pierda en el vacío,", "sistema")
-        self.escribir("necesitás una palabra de anclaje.", "sistema")
-        self.escribir("elegí una frase corta. algo que solo vos sepas.", "sistema")
-        self.escribir("no la anotes en ningún lado. memorizala.", "sistema")
-        self.escribir("")
-        self.escribir("si algún día volvés y la máquina te olvida,", "sistema")
-        self.escribir("esta frase te va a traer de vuelta.", "sistema")
-        self.escribir("")
-        self.escribir("o escribí 'anonimo' para entrar sin anclaje.", "sistema")
-        self.escribir("(si te vas, te vas para siempre.)", "sistema")
-        self.escribir("")
-        self.escribir("¿cuál es tu palabra de anclaje?")
-        self.estado = "LOGIN_ANCLAJE"
-    
-    async def procesar_input(self, data):
-        if data == '\\r':
-            await self.ejecutar_comando()
-        elif data == '\\x7f':
-            if len(self.buffer_input) > 0:
-                self.buffer_input = self.buffer_input[:-1]
-                window.escribirEnTerminal('\\b \\b')
-        elif data == '\\x03':
-            self.buffer_input = ""
-            window.escribirEnTerminal("^C")
-            self.mostrar_prompt()
-        elif ord(data) >= 32:
-            self.buffer_input += data
-            window.escribirEnTerminal(data)
-    
-    async def ejecutar_comando(self):
-        window.escribirEnTerminal("")
-        comando = self.buffer_input.strip().lower()
-        self.buffer_input = ""
-        
-        if not comando:
-            self.mostrar_prompt()
-            return
-        
-        if self.estado == "LOGIN_ANCLAJE":
-            await self.procesar_login(comando)
-        elif self.estado == "CONSOLA":
-            await self.procesar_comando(comando)
-        
-        self.mostrar_prompt()
-    
-    async def procesar_login(self, comando):
-        if comando == "anonimo":
-            self.nombre = "el que llegó"
-            self.palabra_semilla = None
-            self.escribir("entraste sin anclaje.", "sistema")
-            self.escribir("si te vas, te vas para siempre.", "sistema")
-            self.escribir("")
-            self.escribir(f"hola, {self.nombre}.", "exito")
-        else:
-            self.nombre = comando[:20]
-            self.palabra_semilla = comando
-            self.escribir(f"anclaje establecido: {self.nombre}", "exito")
-            self.escribir("la máquina te va a recordar.", "sistema")
-            self.escribir("")
-            self.escribir(f"hola, {self.nombre}.", "exito")
-        
-        self.estado = "CONSOLA"
-        await self.guardar_estado()
-    
-    async def procesar_comando(self, comando):
-        partes = comando.split()
-        verbo = partes[0] if partes else ""
-        
-        if verbo == "mirar":
-            await self.verbo_mirar()
-        elif verbo == "tema":
-            await self.verbo_tema(partes[1] if len(partes) > 1 else None)
-        elif verbo == "verbos":
-            self.escribir("verbos desbloqueados:", "sistema")
-            for v in self.verbos_desbloqueados:
-                self.escribir(f"  • {v}")
-        elif verbo == "ayuda":
-            self.escribir("no hay ayuda. solo hay que mirar.", "sistema")
-            self.escribir("escribí 'verbos' para ver lo que podés hacer.", "sistema")
-        elif verbo == "salir":
-            self.escribir("la máquina te va a esperar.", "sistema")
-            self.escribir("hasta pronto, " + self.nombre + ".", "exito")
-        else:
-            self.escribir(f"no conozco ese movimiento.", "error")
-            self.escribir("mis raíces no llegan tan alto.", "error")
-    
-    async def verbo_mirar(self):
-        self.escribir("mirás a tu alrededor.", "exito")
-        self.escribir("")
-        self.escribir("estás en un nodo del ecosistema.")
-        self.escribir("la terminal parpadea suavemente.")
-        self.escribir("en el borde de tu visión, algo pulsa.")
-        self.escribir("")
-        self.escribir("el primer mundo está cerca.", "sistema")
-        self.escribir("pero primero tenés que aprender a esperar.", "sistema")
-        self.escribir("")
-        
-        if "esperar" not in self.verbos_desbloqueados:
-            self.verbos_desbloqueados.append("esperar")
-            self.escribir("✓ verbo desbloqueado: esperar", "exito")
-            await self.guardar_estado()
-    
-    async def verbo_tema(self, tema):
-        temas_disponibles = ["clasico", "amanecer", "bosque", "oceano", "papel"]
-        
-        if tema is None:
-            self.escribir("temas disponibles:", "sistema")
-            for t in temas_disponibles:
-                self.escribir(f"  • tema {t}")
-        elif tema in temas_disponibles:
-            window.cambiarTema(tema)
-            self.escribir(f"tema cambiado a: {tema}", "exito")
-            await self.guardar_estado()
-        else:
-            self.escribir(f"no conozco ese tema.", "error")
-    
-    def escribir(self, texto, estilo="normal"):
-        window.escribirEnTerminal(texto, estilo)
-    
-    def mostrar_prompt(self):
-        if self.estado == "CONSOLA":
-            window.escribirEnTerminal(f"\\n{self.nombre} > ", "normal")
-        else:
-            window.escribirEnTerminal("> ", "normal")
-    
-    async def guardar_estado(self):
-        estado = {
-            "nombre": self.nombre,
-            "palabra_semilla": self.palabra_semilla,
-            "verbos": self.verbos_desbloqueados,
-            "mundos": self.mundos_completados
-        }
-        js_code = f"localStorage.setItem('ecosistema_estado', JSON.stringify({json.dumps(estado)}))"
-        await window.pyodide.runJavaScriptAsync(js_code)
-    
-    async def cargar_estado(self):
-        try:
-            js_code = "localStorage.getItem('ecosistema_estado')"
-            resultado = await window.pyodide.runJavaScriptAsync(js_code)
-            
-            if resultado and resultado != "null":
-                estado = json.loads(resultado)
-                self.nombre = estado.get("nombre")
-                self.palabra_semilla = estado.get("palabra_semilla")
-                self.verbos_desbloqueados = estado.get("verbos", ["mirar"])
-                self.mundos_completados = estado.get("mundos", [])
-        except:
-            pass
+        // ------------------------------------------------------
+        // Puente eco_*: lo único que Python conoce del navegador
+        // ------------------------------------------------------
 
-juego = Juego()
-`;
+        // escritura cruda, sin salto de línea (eco de teclas, prompt)
+        window.eco_write = function (texto) {
+            term.write(texto);
+        };
 
-        // Loader
-        async function iniciar() {
-            term.writeln('cargando motor...');
-            
-            try {
-                pyodide = await loadPyodide();
-                term.writeln('motor cargado.');
-                term.writeln('despertando ecosistema...');
-                
-                // Ejecutar código Python embebido
-                await pyodide.runPythonAsync(codigoPython);
-                
-                // Obtener referencia al juego
-                juego = pyodide.globals.get('juego');
-                
-                // Inicializar el juego
-                await juego.iniciar();
-                
-                juegoReady = true;
-                
-                // Ocultar loader
-                document.getElementById('loader').style.display = 'none';
-                
-                // Configurar input
-                term.onData(async (data) => {
-                    if (!juegoReady) return;
-                    await procesarInput(data);
-                });
-                
-            } catch (error) {
-                term.writeln(\\`error crítico: \\${error.message}\\`);
-                term.writeln('');
-                term.writeln('la máquina no pudo despertar.', 'error');
-                term.writeln('recargá la página e intentá de nuevo.', 'sistema');
-                console.error(error);
-            }
-        }
-        
-        async function procesarInput(data) {
-            if (!juego) return;
-            await juego.procesar_input(data);
-        }
-        
-        // Función para que Python escriba en la terminal
-        function escribirEnTerminal(texto, estilo = 'normal') {
+        // una línea completa, con estilo
+        window.eco_writeln = function (texto, estilo) {
             if (estilo === 'sistema') {
-                term.writeln(\\`\\x1b[33m\\${texto}\\x1b[0m\\`); // amarillo
+                term.writeln('\x1b[33m' + texto + '\x1b[0m');   // amarillo
             } else if (estilo === 'error') {
-                term.writeln(\\`\\x1b[31m\\${texto}\\x1b[0m\\`); // rojo
+                term.writeln('\x1b[31m' + texto + '\x1b[0m');   // rojo
             } else if (estilo === 'exito') {
-                term.writeln(\\`\\x1b[32m\\${texto}\\x1b[0m\\`); // verde
+                term.writeln('\x1b[92m' + texto + '\x1b[0m');   // verde brillante
             } else {
                 term.writeln(texto);
             }
-        }
-        
-        // Exponer funciones a Python
-        window.escribirEnTerminal = escribirEnTerminal;
-        window.pyodide = pyodide;
-        
-        // Función para cambiar tema
-        function cambiarTema(tema) {
+        };
+
+        window.eco_limpiar = function () {
+            term.clear();
+        };
+
+        // devuelve una Promise: Python la espera con `await`
+        window.eco_pausa = function (ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        };
+
+        window.eco_set_tema = function (tema) {
+            if (!TEMAS[tema]) return;
             document.body.setAttribute('data-tema', tema);
+            term.options.theme = TEMAS[tema];
+        };
+
+        // ------------------------------------------------------
+        // arranque
+        // ------------------------------------------------------
+
+        let juego = null;
+        let listo = false;
+        let cola = Promise.resolve();
+
+        // Las teclas se procesan en fila: una a la vez, sin entreverarse.
+        term.onData((data) => {
+            if (!listo || !juego) return;
+            cola = cola
+                .then(() => juego.procesar_input(data))
+                .catch((err) => console.error(err));
+        });
+
+        async function iniciar() {
+            try {
+                window.eco_writeln('cargando motor...', 'sistema');
+                const pyodide = await loadPyodide();
+                window.eco_writeln('motor cargado.', 'sistema');
+
+                const respuesta = await fetch('juego.py');
+                if (!respuesta.ok) {
+                    throw new Error(
+                        'no se pudo leer juego.py (HTTP ' + respuesta.status +
+                        '). ¿está subido junto a index.html?'
+                    );
+                }
+                const codigo = await respuesta.text();
+                await pyodide.runPythonAsync(codigo);
+
+                const Juego = pyodide.globals.get('Juego');
+                juego = Juego();
+
+                window.eco_limpiar();
+                await juego.iniciar();
+
+                listo = true;
+                window.__ecoListo = true;
+                document.getElementById('loader').style.display = 'none';
+                fitAddon.fit();
+                term.focus();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loader').style.display = 'none';
+                window.eco_writeln('');
+                window.eco_writeln('la máquina no pudo despertar.', 'error');
+                window.eco_writeln('error: ' + error.message, 'error');
+                window.eco_writeln(
+                    'revisá tu conexión, recargá la página e intentá de nuevo.',
+                    'sistema'
+                );
+            }
         }
-        window.cambiarTema = cambiarTema;
-        
-        // Iniciar
+
         iniciar();
     </script>
 </body>

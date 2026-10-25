@@ -1,10 +1,39 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --color-fondo: #000000;
+    --color-texto: #00ff00;
+    --color-acento: #00aa00;
+}
+
+body {
+    background: var(--color-fondo);
+    color: var(--color-texto);
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    height: 100vh;
+    height: 100dvh;
+}
+
+#terminal-container {
+    position: fixed;
+    inset: 0;
+    padding: 16px;
+    background: var(--color-fondo);
+}
+
+.xterm {
+    height: 100%;
+}
+
 /* Loader */
 #loader {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background: #000;
     display: flex;
     flex-direction: column;
@@ -15,10 +44,12 @@
 
 .loader-text {
     color: #0f0;
-    font-family: 'Courier New', monospace;
+    font-family: 'Courier New', Courier, monospace;
     font-size: 18px;
     margin-bottom: 30px;
     letter-spacing: 2px;
+    padding: 0 20px;
+    text-align: center;
 }
 
 .loader-dots {
@@ -41,4 +72,70 @@
 @keyframes pulse {
     0%, 100% { opacity: 0.2; transform: scale(0.8); }
     50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Pulso del sentido arácnido */
+#pulso {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    background: var(--color-acento);
+    border-radius: 50%;
+    opacity: 0;
+    animation: pulso 15s infinite;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes pulso {
+    0%, 95%, 100% { opacity: 0; }
+    96%, 99% { opacity: 0.6; }
+}
+
+/*
+ * Temas.
+ * Estas variables pintan el fondo de la página, el loader y el pulso.
+ * Los colores de la terminal en sí los pone index.html con la API de
+ * xterm (term.options.theme): las variables CSS no llegan ahí.
+ */
+[data-tema="clasico"] {
+    --color-fondo: #000000;
+    --color-texto: #00ff00;
+    --color-acento: #00aa00;
+}
+
+[data-tema="amanecer"] {
+    --color-fondo: #1a1a2e;
+    --color-texto: #ff9a3c;
+    --color-acento: #ff6b35;
+}
+
+[data-tema="bosque"] {
+    --color-fondo: #0a1a0a;
+    --color-texto: #7fff7f;
+    --color-acento: #4a7c4a;
+}
+
+[data-tema="oceano"] {
+    --color-fondo: #001a33;
+    --color-texto: #66ccff;
+    --color-acento: #3399cc;
+}
+
+[data-tema="papel"] {
+    --color-fondo: #f5f5dc;
+    --color-texto: #000000;
+    --color-acento: #333333;
+}
+
+@media (max-width: 600px) {
+    #terminal-container {
+        padding: 8px;
+    }
+
+    .loader-text {
+        font-size: 15px;
+    }
 }
