@@ -67,8 +67,8 @@
                 <small>resonancia acumulada</small>
             </div>
             <div class="hud-cell hud-progress">
-                <span class="hud-label">mundos estabilizados</span>
-                <div class="progress-readout"><strong id="hud-mundos">00</strong><span>/ 02</span></div>
+                <span class="hud-label">nodos estabilizados</span>
+                <div class="progress-readout"><strong id="hud-mundos">00</strong><span>en expansión</span></div>
                 <div class="progress-track" aria-hidden="true"><i id="hud-progreso"></i></div>
             </div>
         </section>
@@ -100,76 +100,74 @@
                     <aside class="side-rail" aria-label="estado de la partida">
                         <section class="rail-card board-preview">
                             <div class="rail-heading"><span>cartografía</span><span class="rail-code">A—07</span></div>
-                            <div class="mini-route" aria-hidden="true">
-                                <i class="route-line"></i>
-                                <span class="route-node route-node-hub" id="mini-nodo"><i></i></span>
-                                <span class="route-node route-node-clear" id="mini-claro"><i></i></span>
-                                <span class="route-node route-node-library" id="mini-biblioteca"><i></i></span>
+                            <div class="mini-locations" aria-hidden="true">
+                                <span class="map-signal map-signal-hub" id="mini-nodo"><i></i></span>
+                                <span class="map-signal map-signal-clear" id="mini-claro" hidden><i></i></span>
+                                <span class="map-signal map-signal-library" id="mini-biblioteca" hidden><i></i></span>
+                                <span class="map-signal map-signal-marte" id="mini-marte" hidden><i></i></span>
                             </div>
-                            <div class="mini-route-labels"><span>nodo</span><span>claro</span><span>archivo</span></div>
+                            <div class="mini-location-labels"><span id="mini-label-nodo">entrada</span><span id="mini-label-claro" hidden></span><span id="mini-label-biblioteca" hidden></span><span id="mini-label-marte" hidden></span></div>
                             <button type="button" class="text-link" data-vista="mapa" disabled>abrir tablero <span aria-hidden="true">↗</span></button>
                         </section>
 
                         <section class="rail-card verbs-card">
-                            <div class="rail-heading"><span>vocabulario</span><span class="rail-count" id="verb-count">00</span></div>
-                            <p class="rail-caption">lo que podés hacer modifica la ruta.</p>
-                            <div class="verb-chip-list" id="verb-chip-list"><span class="verb-chip">mirar</span></div>
-                            <button type="button" class="text-link" data-vista="gabinete" disabled>ir al gabinete <span aria-hidden="true">↗</span></button>
+                            <div class="rail-heading"><span>comandos disponibles</span><span class="rail-count" id="verb-count">00</span></div>
+                            <p class="rail-caption">tocá uno para escribirlo en la consola.</p>
+                            <div class="verb-chip-list" id="verb-chip-list"><button type="button" class="verb-chip command-chip" disabled>mirar</button></div>
+                            <div class="quick-action-list" id="quick-action-list"></div>
+                            <button type="button" class="text-link" data-vista="gabinete" disabled>intercambiar eco <span aria-hidden="true">↗</span></button>
                         </section>
 
                         <section class="rail-card field-card" id="field-card">
                             <span class="field-label"><i class="field-dot" aria-hidden="true"></i> interferencia</span>
                             <p id="field-message">la señal todavía no sabe qué estás buscando.</p>
+                            <div class="field-progress"><span id="field-progress-label">sin actividad</span><div class="field-progress-track" role="progressbar" aria-labelledby="field-progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="field-progress-bar"></i></div></div>
                             <div class="field-scan" aria-hidden="true"><i></i></div>
                         </section>
                     </aside>
                 </div>
             </section>
 
-            <!-- TABLERO: mundos como casillas conectadas, no como comandos escondidos. -->
+            <!-- TABLERO: muestra solo los lugares que la partida ya descubrió. -->
             <section class="view view-board" id="vista-mapa" aria-label="tablero de mundos" hidden>
                 <div class="view-heading">
-                    <div><span class="overline">compartimento 02 / navegación</span><h1>el tablero</h1><p>los lugares abiertos permanecen en tu mapa. elegí una casilla para entrar.</p></div>
-                    <div class="board-total"><span>espacios detectados</span><strong id="board-total">01 <i>/ 04</i></strong></div>
+                    <div><span class="overline">compartimento 02 / señal</span><h1>el tablero</h1><p>el resto del mapa todavía es ruido. los lugares aparecen cuando conseguís reconocerlos.</p></div>
+                    <div class="board-total"><span>señales reconocidas</span><strong id="board-total">01</strong></div>
                 </div>
                 <div class="board-canvas">
-                    <svg class="board-routes" viewBox="0 0 1000 270" preserveAspectRatio="none" aria-hidden="true">
-                        <path d="M150 132 C230 132 250 132 330 132"></path>
-                        <path d="M510 132 C600 132 610 132 690 132"></path>
-                        <path d="M850 132 C900 132 900 132 950 132"></path>
-                    </svg>
+                    <div class="star-field" aria-hidden="true"></div>
                     <div class="world-grid">
                         <button class="world-card is-open" type="button" data-destino="nodo" disabled>
-                            <span class="world-meta"><span>BASE / 00</span><i class="node-status"></i></span>
+                            <span class="world-meta"><span>entrada / 07</span><i class="node-status"></i></span>
                             <span class="world-icon icon-node" aria-hidden="true"><i></i></span>
                             <strong>nodo de acceso</strong>
                             <small>la máquina te vio llegar.</small>
                             <span class="world-action">estás aquí</span>
                         </button>
-                        <button class="world-card is-locked" type="button" data-destino="claro" disabled>
-                            <span class="world-meta"><span>MUNDO / 01</span><i class="node-status"></i></span>
-                            <span class="world-icon icon-clear" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <button class="world-card" type="button" data-destino="claro" hidden disabled>
+                            <span class="world-meta"><span>señal / humedad</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-clear" aria-hidden="true">🌱</span>
                             <strong>el claro</strong>
                             <small>tres marcas · una secuencia.</small>
-                            <span class="world-action">señal cerrada</span>
+                            <span class="world-action">entrar</span>
                         </button>
-                        <button class="world-card is-locked" type="button" data-destino="biblioteca" disabled>
-                            <span class="world-meta"><span>MUNDO / 02</span><i class="node-status"></i></span>
-                            <span class="world-icon icon-library" aria-hidden="true"><i></i><i></i><i></i></span>
-                            <strong>biblioteca subterránea 7</strong>
-                            <small>tres registros se contradicen.</small>
-                            <span class="world-action">sin acceso</span>
+                        <button class="world-card" type="button" data-destino="biblioteca" hidden disabled>
+                            <span class="world-meta"><span>señal / subterránea</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-library" aria-hidden="true">📚</span>
+                            <strong>biblioteca 7</strong>
+                            <small>tres registros · un orden.</small>
+                            <span class="world-action">entrar</span>
                         </button>
-                        <div class="world-card world-future" aria-label="mundo futuro, señal no detectada">
-                            <span class="world-meta"><span>MUNDO / ??</span><i class="node-status"></i></span>
-                            <span class="world-icon icon-static" aria-hidden="true">···</span>
-                            <strong>señal sin nombre</strong>
-                            <small>hay algo detrás del ruido.</small>
-                            <span class="world-action">no cartografiado</span>
-                        </div>
+                        <button class="world-card" type="button" data-destino="marte" hidden disabled>
+                            <span class="world-meta"><span>planeta / cuarto lugar</span><i class="node-status"></i></span>
+                            <span class="world-icon icon-mars" aria-hidden="true">🪐</span>
+                            <strong>marte</strong>
+                            <small>una palabra llegó invertida.</small>
+                            <span class="world-action">entrar</span>
+                        </button>
                     </div>
                 </div>
-                <div class="board-note"><span class="note-marker">⌁</span><p id="board-message">un mapa no es una instrucción. es una promesa de distancia.</p><span class="board-coordinate">lat. 00°07 / eco</span></div>
+                <div class="board-note"><span class="note-marker">⌁</span><p id="board-message">el tablero no dibuja caminos. conserva solo los lugares que ya podés nombrar.</p><span class="board-coordinate">⌘ / sin escala</span></div>
             </section>
 
             <!-- ARCHIVO: progreso y recompensas, fuera del log de la consola. -->
@@ -225,11 +223,11 @@
         <footer class="cabinet-footer">
             <span>ECOSISTEMA <b>·</b> terminal de tránsito <b>·</b> una puerta, no un cuarto</span>
             <span id="footer-state">la máquina está escuchando</span>
-            <span class="footer-version">BUILD 0.3 / PY-07</span>
+            <span class="footer-version">BUILD 0.4 / PY-07</span>
         </footer>
     </main>
 
-    <div class="travel-flash" id="travel-flash" aria-hidden="true"><div class="travel-flash-inner"><span>reconfigurando ruta</span><i>· · ·</i></div></div>
+    <div class="travel-flash" id="travel-flash" aria-hidden="true"><div class="travel-flash-inner"><span>cambiando coordenada</span><i>· · ·</i></div></div>
     <div id="pulso" aria-hidden="true"></div>
 
     <script>
@@ -282,7 +280,7 @@
         };
 
         const LOCALES = {
-            nodo: 'nodo-07', claro: 'el-claro', biblioteca: 'biblioteca-subterranea-7'
+            nodo: 'nodo-07', claro: 'el-claro', biblioteca: 'biblioteca-7', marte: 'marte'
         };
 
         function temaGuardado() {
@@ -301,7 +299,7 @@
             cursorBlink: true,
             cursorStyle: 'bar',
             convertEol: true,
-            fontSize: window.matchMedia('(max-width: 700px)').matches ? 13 : 15,
+            fontSize: window.matchMedia('(max-width: 700px)').matches ? 14 : 15,
             fontFamily: "'Courier New', 'Lucida Console', monospace",
             fontWeight: '400',
             fontWeightBold: '600',
@@ -419,7 +417,7 @@
                 const tick = () => {
                     const resta = Math.max(0, ultimaDuracionPulso - Date.now());
                     label.textContent = resta > 0 ? 'intervalo abierto' : 'latente';
-                    cuenta.textContent = resta > 0 ? `${(resta / 1000).toFixed(1)} s · la ruta está viva` : 'el intervalo volvió a cerrarse';
+                    cuenta.textContent = resta > 0 ? `${(resta / 1000).toFixed(1)} s · el pulso sigue abierto` : 'el intervalo volvió a cerrarse';
                     if (resta <= 0) {
                         orb.classList.remove('is-window');
                         field.classList.remove('has-signal');
@@ -451,19 +449,55 @@
             const lista = document.getElementById('verb-chip-list');
             lista.replaceChildren();
             for (const verbo of verbos) {
-                const chip = document.createElement('span');
-                chip.className = 'verb-chip';
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'verb-chip command-chip';
                 chip.textContent = verbo;
+                chip.disabled = !estadoActual?.autenticado;
+                chip.title = `escribir ${verbo} en la consola`;
+                chip.addEventListener('click', () => prepararComando(verbo));
                 lista.appendChild(chip);
             }
             document.getElementById('verb-count').textContent = String(verbos.length).padStart(2, '0');
         }
 
         const worldInfo = {
-            nodo: { titulo: 'nodo de acceso', numero: '00', cualidad: 'BASE' },
-            claro: { titulo: 'el claro', numero: '01', cualidad: 'MUNDO' },
-            biblioteca: { titulo: 'biblioteca subterránea 7', numero: '02', cualidad: 'MUNDO' }
+            nodo: { titulo: 'nodo de acceso', marca: 'entrada' },
+            claro: { titulo: 'el claro', marca: 'jardín' },
+            biblioteca: { titulo: 'biblioteca 7', marca: 'archivo' },
+            marte: { titulo: 'marte', marca: 'planeta' }
         };
+
+        function renderAccionesRapidas(estado) {
+            const lista = document.getElementById('quick-action-list');
+            lista.replaceChildren();
+            const verbos = new Set(estado.verbos || []);
+            const mundos = new Set(estado.mundos || []);
+            const ubicaciones = new Set(estado.ubicaciones_abiertas || []);
+            const pistas = new Set(estado.pistas_biblioteca || []);
+            let sugerencias = [];
+            if (estado.lugar === 'claro' && !mundos.has('claro') && verbos.has('tocar')) {
+                sugerencias = ['tocar agua', 'tocar piedra', 'tocar semilla'];
+            } else if (estado.lugar === 'biblioteca' && !mundos.has('biblioteca') && verbos.has('preguntar')) {
+                const faltan = ['agua', 'semilla', 'eco'].filter((pista) => !pistas.has(pista));
+                sugerencias = faltan.length
+                    ? faltan.map((pista) => `preguntar ${pista}`)
+                    : ['tocar eco', 'tocar agua', 'tocar semilla'];
+            } else if (estado.lugar === 'biblioteca' && mundos.has('biblioteca') && verbos.has('descifrar') && !ubicaciones.has('marte')) {
+                sugerencias = ['descifrar'];
+            } else if (estado.lugar === 'marte' && !mundos.has('marte') && verbos.has('ordenar')) {
+                sugerencias = ['ordenar', 'preguntar sol'];
+            }
+            for (const comando of sugerencias) {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'quick-command command-chip';
+                chip.textContent = comando;
+                chip.disabled = !estadoActual?.autenticado;
+                chip.addEventListener('click', () => prepararComando(comando));
+                lista.appendChild(chip);
+            }
+        }
 
         function renderMapa(estado) {
             const abierto = new Set(estado.ubicaciones_abiertas || ['nodo']);
@@ -473,33 +507,40 @@
                 const disponible = abierto.has(id);
                 const actual = estado.lugar === id;
                 const completo = completos.has(id);
+                boton.hidden = !disponible;
                 boton.disabled = !disponible || actual;
-                boton.classList.toggle('is-locked', !disponible);
                 boton.classList.toggle('is-open', disponible);
                 boton.classList.toggle('is-current', actual);
                 boton.classList.toggle('is-cleared', completo);
+                if (!disponible) continue;
                 const accion = boton.querySelector('.world-action');
-                if (actual) accion.textContent = 'estás aquí';
-                else if (completo) accion.textContent = 'revisitar ↗';
-                else if (disponible) accion.textContent = 'entrar ↗';
-                else if (id === 'claro' && estado.ventana_ms > 0) accion.textContent = 'esperando pulso';
-                else if (id === 'claro') accion.textContent = 'señal cerrada';
-                else accion.textContent = estado.mundos.includes('claro') ? 'falta un verbo' : 'sin acceso';
+                accion.textContent = actual ? 'estás aquí' : (completo ? 'volver a visitar' : 'entrar');
             }
-            const total = document.getElementById('board-total');
-            const disponibles = abierto.size;
-            total.innerHTML = `${String(disponibles).padStart(2, '0')} <i>/ 04</i>`;
-            const mini = { nodo: 'mini-nodo', claro: 'mini-claro', biblioteca: 'mini-biblioteca' };
-            for (const [id, elementId] of Object.entries(mini)) {
-                const node = document.getElementById(elementId);
-                node.classList.toggle('is-open', abierto.has(id));
+            document.getElementById('board-total').textContent = String(abierto.size).padStart(2, '0');
+            const mini = {
+                nodo: ['mini-nodo', 'mini-label-nodo'],
+                claro: ['mini-claro', 'mini-label-claro'],
+                biblioteca: ['mini-biblioteca', 'mini-label-biblioteca'],
+                marte: ['mini-marte', 'mini-label-marte']
+            };
+            for (const [id, [nodeId, labelId]] of Object.entries(mini)) {
+                const node = document.getElementById(nodeId);
+                const label = document.getElementById(labelId);
+                const conocido = abierto.has(id);
+                node.hidden = !conocido;
+                label.hidden = !conocido;
+                node.classList.toggle('is-open', conocido);
                 node.classList.toggle('is-current', estado.lugar === id);
                 node.classList.toggle('is-cleared', completos.has(id));
+                label.textContent = conocido ? worldInfo[id].marca : '···';
             }
             const messages = {
-                nodo: 'la máquina te registró como llegada. el primer movimiento todavía no tiene nombre.',
-                claro: 'el tablero no dice qué hacer. las marcas de cada casilla sí.',
-                biblioteca: 'tres registros se contradicen. ninguna puerta se abre por fuerza.'
+                nodo: 'el tablero no dibuja caminos. reconocé una señal y el siguiente lugar tomará forma.',
+                claro: 'el lugar que ya entendiste permanece. el resto no está marcado.',
+                biblioteca: completos.has('biblioteca')
+                    ? (abierto.has('marte') ? 'el punto rojo del tablero ya tiene nombre.' : 'una palabra del archivo todavía necesita ser leída al revés.')
+                    : 'tres registros se contradicen. ninguna puerta se abre por fuerza.',
+                marte: 'las tarjetas del planetario no vienen en orden. buscá lo que ya sabés del cielo.'
             };
             document.getElementById('board-message').textContent = messages[estado.lugar] || messages.nodo;
         }
@@ -508,37 +549,51 @@
             const shop = document.getElementById('verb-market');
             shop.replaceChildren();
             document.getElementById('cabinet-eco').textContent = String(estado.eco).padStart(2, '0');
-            const tiene = (estado.verbos || []).includes('preguntar');
-            const listoParaComprar = (estado.mundos || []).includes('claro');
-            const card = document.createElement('article');
-            card.className = `verb-offer ${tiene ? 'is-installed' : ''}`;
-            const meta = document.createElement('div');
-            meta.className = 'offer-meta';
-            meta.innerHTML = '<span>nuevo verbo / 01</span><span>02 ◈</span>';
-            const title = document.createElement('h2');
-            title.textContent = 'preguntar';
-            const description = document.createElement('p');
-            description.textContent = 'hay lugares que solo responden cuando aprendés a formular la pregunta.';
-            const location = document.createElement('div');
-            location.className = 'offer-unlocks';
-            location.innerHTML = '<span class="offer-arrow">↳</span><span>abre la biblioteca subterránea 7</span>';
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'verb-buy';
-            button.dataset.verbo = 'preguntar';
-            button.disabled = tiene || !listoParaComprar || estado.eco < 2;
-            if (tiene) button.textContent = 'instalado ✓';
-            else if (!listoParaComprar) button.textContent = 'la señal todavía no llegó';
-            else if (estado.eco < 2) button.textContent = 'faltan ecos';
-            else button.textContent = 'intercambiar · 2 eco';
-            button.addEventListener('click', () => comprarVerbo('preguntar'));
-            card.append(meta, title, description, location, button);
-            shop.appendChild(card);
-            if (!listoParaComprar && !tiene) {
-                const locked = document.createElement('div');
-                locked.className = 'market-locked';
-                locked.innerHTML = '<span aria-hidden="true">···</span><p>la máquina todavía no ofrece otras palabras.</p>';
-                shop.appendChild(locked);
+            const mundos = new Set(estado.mundos || []);
+            const verbos = new Set(estado.verbos || []);
+            const ofertas = [
+                {
+                    verbo: 'preguntar', coste: 2, requisito: 'claro',
+                    descripcion: 'hay lugares que solo responden cuando aprendés a formular la pregunta.',
+                    destino: 'biblioteca subterránea 7'
+                },
+                {
+                    verbo: 'descifrar', coste: 3, requisito: 'biblioteca',
+                    descripcion: 'una palabra conocida puede esconderse si la leés desde el otro extremo.',
+                    destino: 'una señal que todavía no tiene nombre'
+                }
+            ];
+            const visibles = ofertas.filter((oferta) => mundos.has(oferta.requisito) || verbos.has(oferta.verbo));
+            if (!visibles.length) {
+                const vacio = document.createElement('div');
+                vacio.className = 'market-locked';
+                vacio.innerHTML = '<span aria-hidden="true">◈</span><p>el gabinete todavía no ofrece palabras. primero hay que ganarse el eco.</p>';
+                shop.appendChild(vacio);
+                return;
+            }
+            for (const oferta of visibles) {
+                const tiene = verbos.has(oferta.verbo);
+                const card = document.createElement('article');
+                card.className = `verb-offer ${tiene ? 'is-installed' : ''}`;
+                const meta = document.createElement('div');
+                meta.className = 'offer-meta';
+                meta.innerHTML = `<span>intercambio / verbo</span><span>${String(oferta.coste).padStart(2, '0')} ◈</span>`;
+                const title = document.createElement('h2');
+                title.textContent = oferta.verbo;
+                const description = document.createElement('p');
+                description.textContent = oferta.descripcion;
+                const location = document.createElement('div');
+                location.className = 'offer-unlocks';
+                location.innerHTML = `<span class="offer-arrow">↳</span><span>${oferta.destino}</span>`;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'verb-buy';
+                button.dataset.verbo = oferta.verbo;
+                button.disabled = tiene || estado.eco < oferta.coste;
+                button.textContent = tiene ? 'instalado ✓' : (estado.eco < oferta.coste ? 'faltan ecos' : `intercambiar · ${oferta.coste} eco`);
+                button.addEventListener('click', () => comprarVerbo(oferta.verbo));
+                card.append(meta, title, description, location, button);
+                shop.appendChild(card);
             }
         }
 
@@ -559,15 +614,15 @@
             const worldList = document.getElementById('archive-worlds');
             worldList.replaceChildren();
             document.getElementById('archive-world-count').textContent = String(abiertos.size).padStart(2, '0');
-            for (const id of ['nodo', 'claro', 'biblioteca']) {
+            for (const id of ['nodo', 'claro', 'biblioteca', 'marte']) {
+                if (!abiertos.has(id)) continue;
                 const entry = document.createElement('span');
-                entry.className = 'archive-world-entry';
-                if (abiertos.has(id)) entry.classList.add('is-open');
+                entry.className = 'archive-world-entry is-open';
                 if (completos.has(id)) entry.classList.add('is-complete');
                 if (estado.lugar === id) entry.classList.add('is-current');
                 const led = document.createElement('i');
                 const label = document.createElement('span');
-                label.textContent = `${worldInfo[id].numero} / ${worldInfo[id].titulo}`;
+                label.textContent = worldInfo[id].titulo;
                 entry.append(led, label);
                 worldList.appendChild(entry);
             }
@@ -591,6 +646,10 @@
                 'eco_mundo_02.txt': {
                     title: 'biblioteca subterránea 7 / salida 02',
                     text: `ECO DE LA BIBLIOTECA SUBTERRÁNEA 7\n\nuna cosa llega antes.\notra no sabe que la está siguiendo.\ny la última cree que llegó sola.\n\norden reconstruido: semilla · eco · agua\n\n— registro 02 / ecosistema\n`
+                },
+                'eco_mundo_03.txt': {
+                    title: 'marte / salida 03',
+                    text: `ECO DE MARTE\n\ncuatro órbitas alrededor de una pregunta antigua.\nel planeta rojo no estaba perdido:\nla palabra se había dado vuelta.\n\norden solar: mercurio · venus · tierra · marte\n\n— registro 03 / ecosistema\n`
                 }
             };
             for (const archivo of salidas) {
@@ -630,12 +689,41 @@
             document.getElementById('footer-state').textContent = estado.autenticado ? 'la máquina está escuchando' : 'terminal en espera';
             document.getElementById('estado-enlace').textContent = estado.autenticado ? 'enlace estable' : 'esperando señal';
             document.getElementById('hud-eco').textContent = String(estado.eco || 0).padStart(2, '0');
-            const cantidad = (estado.mundos || []).length;
+            const mundos = new Set(estado.mundos || []);
+            const cantidad = mundos.size;
             document.getElementById('hud-mundos').textContent = String(cantidad).padStart(2, '0');
-            document.getElementById('hud-progreso').style.width = `${Math.min(100, cantidad * 50)}%`;
+            document.getElementById('hud-progreso').style.width = `${Math.min(100, cantidad * 25)}%`;
             document.getElementById('field-message').textContent = estado.indicio || 'la señal todavía no sabe qué estás buscando.';
+            let progreso = 0;
+            let etiquetaProgreso = 'sin actividad';
+            if (mundos.has(estado.lugar)) {
+                progreso = 100;
+                etiquetaProgreso = 'señal estable';
+            } else if (estado.lugar === 'claro') {
+                progreso = Math.min(100, (Number(estado.progreso_claro) || 0) / 3 * 100);
+                etiquetaProgreso = `marcas reconocidas · ${Number(estado.progreso_claro) || 0}/3`;
+            } else if (estado.lugar === 'biblioteca') {
+                const leidas = new Set(estado.pistas_biblioteca || []).size;
+                if (leidas < 3) {
+                    progreso = leidas / 3 * 100;
+                    etiquetaProgreso = `registros leídos · ${leidas}/3`;
+                } else {
+                    const puestas = Number(estado.progreso_biblioteca) || 0;
+                    progreso = puestas / 3 * 100;
+                    etiquetaProgreso = `fichas ordenadas · ${puestas}/3`;
+                }
+            } else if (estado.lugar === 'marte') {
+                const orbitas = Number(estado.progreso_marte) || 0;
+                progreso = orbitas / 4 * 100;
+                etiquetaProgreso = `órbitas sincronizadas · ${orbitas}/4`;
+            }
+            document.getElementById('field-progress-label').textContent = etiquetaProgreso;
+            const barraProgreso = document.getElementById('field-progress-bar');
+            barraProgreso.style.width = `${progreso}%`;
+            barraProgreso.parentElement.setAttribute('aria-valuenow', String(Math.round(progreso)));
             document.getElementById('field-card').classList.toggle('has-signal', estado.pulso === 'cerca' || estado.pulso === 'ventana');
             renderVerbos(estado.verbos || ['mirar']);
+            renderAccionesRapidas(estado);
             renderMapa(estado);
             renderGabinete(estado);
             renderArchivo(estado);
@@ -648,6 +736,17 @@
         function comprarVerbo(verbo) {
             if (!listo || !juego) return;
             cola = cola.then(() => juego.comprar_verbo_ui(verbo)).catch((error) => console.error(error));
+        }
+
+        function prepararComando(comando) {
+            if (!listo || !juego || !estadoActual || !estadoActual.autenticado) return;
+            cola = cola.then(() => {
+                if (vistaActual !== 'consola') {
+                    juego.cancelar_linea_ui();
+                    activarVista('consola');
+                }
+                juego.insertar_comando_ui(comando);
+            }).catch((error) => console.error(error));
         }
 
         function descargar(nombre, contenido) {

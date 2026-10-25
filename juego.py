@@ -13,17 +13,23 @@ import time
 CLAVE_ESTADO = "ecosistema_estado"
 TEMAS = ["clasico", "amanecer", "bosque", "oceano", "papel"]
 
-# Verbos del mundo: algunos se descubren; otros se intercambian por eco.
-VERBOS_DEL_MUNDO = ["mirar", "esperar", "cruzar", "tocar", "recordar", "preguntar"]
-COSTE_VERBOS = {"preguntar": 2}
+# Los verbos se incorporan poco a poco: algunos nacen en un mundo,
+# otros se intercambian por eco en el gabinete.
+VERBOS_DEL_MUNDO = [
+    "mirar", "esperar", "cruzar", "tocar", "recordar", "preguntar",
+    "descifrar", "ordenar",
+]
+COSTE_VERBOS = {"preguntar": 2, "descifrar": 3}
 DURACION_PULSO_MS = 15000
 ORDEN_CLARO = ["piedra", "semilla", "agua"]
 ORDEN_BIBLIOTECA = ["semilla", "eco", "agua"]
+ORDEN_MARTE = ["mercurio", "venus", "tierra", "marte"]
 
 NOMBRES_LUGAR = {
     "nodo": "nodo de acceso",
     "claro": "el claro",
     "biblioteca": "biblioteca subterránea 7",
+    "marte": "Marte",
 }
 
 
@@ -63,7 +69,7 @@ class Juego:
                 self.guardar_estado()
             else:
                 self.escribir("el ecosistema te recuerda.")
-            self.escribir(f"la ruta sigue en {NOMBRES_LUGAR.get(self.lugar, 'el nodo')}.", "sistema")
+            self.escribir(f"seguís en {NOMBRES_LUGAR.get(self.lugar, 'el nodo')}.", "sistema")
             self.escribir("F2 abre el tablero. el mapa no habla en el log.", "sistema")
         else:
             await self.login()
@@ -101,8 +107,8 @@ class Juego:
         self.estado = "CONSOLA"
         self.escribir("")
         self.escribir(f"el nodo registró: {self.nombre}.", "exito")
-        self.escribir("la ruta se dibuja mientras mirás hacia otro lado.", "sistema")
-        self.escribir("no apareció un menú. apareció una terminal.", "tenue")
+        self.escribir("la señal cambia mientras mirás hacia otro lado.", "sistema")
+        self.escribir("los comandos disponibles están junto a la consola.", "tenue")
         self.escribir("")
         self.escribir("escribí 'mirar'. cuando el pulso cambie, decidí si cruzás.", "sistema")
         self.guardar_estado()
@@ -118,6 +124,8 @@ class Juego:
             ubicaciones.append("claro")
         if self.lugar == "biblioteca" or "preguntar" in self.verbos:
             ubicaciones.append("biblioteca")
+        if self.lugar == "marte" or self.banderas.get("ruta_marte"):
+            ubicaciones.append("marte")
 
         if ventana_ms > 0:
             pulso = "ventana"
@@ -127,6 +135,8 @@ class Juego:
         elif self.lugar == "claro" and "claro" not in self.mundos:
             pulso = "cerca"
         elif self.lugar == "biblioteca" and "biblioteca" not in self.mundos:
+            pulso = "cerca"
+        elif self.lugar == "marte" and "marte" not in self.mundos:
             pulso = "cerca"
         elif self.mundos:
             pulso = "eco"
@@ -141,6 +151,14 @@ class Juego:
             indicio = "tres marcas ocupan una fila. el orden importa."
         elif self.lugar == "biblioteca" and "biblioteca" not in self.mundos:
             indicio = "tres registros se contradicen; no pueden llegar primeros a la vez."
+        elif self.lugar == "biblioteca" and "biblioteca" in self.mundos and not self.banderas.get("ruta_marte"):
+            indicio = "ETRAM: una palabra conocida, escrita al revés."
+        elif self.lugar == "biblioteca" and "biblioteca" in self.mundos:
+            indicio = "Marte ya aparece en el tablero; la nota conserva el reverso."
+        elif self.lugar == "marte" and "marte" not in self.mundos:
+            indicio = "cuatro órbitas. una fila que se ordena desde el Sol."
+        elif "marte" in self.mundos:
+            indicio = "la señal de Marte ya tiene nombre. el ruido no terminó."
         elif "biblioteca" in self.mundos:
             indicio = "quedó una señal detrás del último registro."
         elif "claro" in self.mundos:
@@ -165,6 +183,7 @@ class Juego:
             "pistas_biblioteca": self.banderas.get("pistas_biblioteca", []),
             "progreso_claro": self.banderas.get("puzzle_claro", 0),
             "progreso_biblioteca": self.banderas.get("puzzle_biblioteca", 0),
+            "progreso_marte": self.banderas.get("puzzle_marte", 0),
         }
 
     def sincronizar_interfaz(self):
@@ -176,7 +195,7 @@ class Juego:
 
     def guardar_estado(self):
         estado = {
-            "version": 3,
+            "version": 4,
             "nombre": self.nombre,
             "palabra_semilla": self.palabra_semilla,
             "verbos": self.verbos,
@@ -391,6 +410,10 @@ class Juego:
             self.verbo_recordar()
         elif verbo == "preguntar":
             self.verbo_preguntar(resto)
+        elif verbo == "descifrar":
+            self.verbo_descifrar(resto)
+        elif verbo == "ordenar":
+            self.verbo_ordenar(resto)
         else:
             self.escribir("ese movimiento no pertenece a esta máquina.", "error")
             self.escribir("probá otro verbo. escuchá lo que hace el pulso.", "tenue")
@@ -442,11 +465,11 @@ class Juego:
         estado = self._estado_publico()
         if destino not in estado["ubicaciones_abiertas"]:
             self.escribir("")
-            self.escribir("el tablero intentó dibujar esa ruta, pero el nodo no respondió.", "error")
+            self.escribir("esa ubicación todavía no responde al tablero.", "error")
             if destino == "claro":
                 self.escribir("el intervalo se cerró. esperá hasta sentir otro pulso.", "sistema")
             else:
-                self.escribir("hay una palabra que todavía no aprendiste a usar.", "sistema")
+                self.escribir("el tablero conserva solo las señales que ya reconociste.", "sistema")
             self.mostrar_prompt()
             self.sincronizar_interfaz()
             return
@@ -461,7 +484,7 @@ class Juego:
         anterior = self.lugar
         self.lugar = destino
         window.eco_write("\r\n")
-        self.escribir(f"ruta reconfigurada: {NOMBRES_LUGAR.get(anterior, anterior)} → {NOMBRES_LUGAR[destino]}.", "tenue")
+        self.escribir(f"coordenada ajustada: {NOMBRES_LUGAR.get(anterior, anterior)} → {NOMBRES_LUGAR[destino]}.", "tenue")
         self.escribir("")
         self.introducir_lugar(destino)
         if destino == "claro" and not self.banderas.get("claro_visitado"):
@@ -475,35 +498,59 @@ class Juego:
     def introducir_lugar(self, destino):
         if destino == "nodo":
             self.escribir("el nodo de acceso", "exito")
-            self.escribir("la ruta se pliega detrás tuyo. todavía podés volver al tablero.", "sistema")
+            self.escribir("el ruido cambia de forma. todavía podés volver al tablero.", "sistema")
         elif destino == "claro":
             self.escribir("un cambio de presión: el claro.", "exito")
             self.escribir("en el centro, una semilla late junto a un tablero de piedra.")
-            self.escribir("el camino de vuelta no se borra. (cruzar / F2 tablero)", "sistema")
+            self.escribir("podés volver cuando quieras. (cruzar / F2 tablero)", "sistema")
         elif destino == "biblioteca":
             self.escribir("biblioteca subterránea 7", "exito")
             self.escribir("tres registros llegaron sin orden. cada uno conserva una condición.")
             self.escribir("preguntá por agua, semilla y eco. después decidí qué tocás primero.", "sistema")
+        elif destino == "marte":
+            self.escribir("la señal encontró un nombre: Marte. 🪐", "exito")
+            self.escribir("una maqueta de planetario dejó cuatro órbitas sin ordenar.")
+            self.escribir("los nombres aparecen en el panel; el Sol no espera que los adivines.", "sistema")
 
     def comprar_verbo_ui(self, verbo):
-        if verbo != "preguntar":
+        requisitos = {"preguntar": "claro", "descifrar": "biblioteca"}
+        mensajes = {
+            "preguntar": "preguntar abrió una respuesta bajo tierra.",
+            "descifrar": "descifrar ya está en tu vocabulario. la palabra invertida no cambió.",
+        }
+        if verbo not in requisitos:
             window.eco_mensaje_gabinete("esa ranura todavía no tiene una palabra.", "error")
             return
         if verbo in self.verbos:
-            window.eco_mensaje_gabinete("preguntar ya forma parte de tu vocabulario.", "exito")
+            window.eco_mensaje_gabinete(mensajes[verbo], "exito")
             return
-        if "claro" not in self.mundos:
+        if requisitos[verbo] not in self.mundos:
             window.eco_mensaje_gabinete("la máquina todavía no puso esa palabra en circulación.", "normal")
             return
         coste = COSTE_VERBOS[verbo]
         if self.eco < coste:
-            window.eco_mensaje_gabinete("faltan ecos. el claro todavía guarda algo de resonancia.", "error")
+            window.eco_mensaje_gabinete("faltan ecos. ningún registro pierde su resonancia.", "error")
             return
         self.eco -= coste
         self.verbos.append(verbo)
-        window.eco_mensaje_gabinete("verbo instalado. una puerta apareció bajo tierra.", "exito")
+        if verbo == "preguntar":
+            mensaje = "verbo instalado. una respuesta apareció bajo tierra."
+        else:
+            mensaje = "verbo instalado. ahora podés leer la línea que quedó al revés."
+        window.eco_mensaje_gabinete(mensaje, "exito")
         window.eco_evento("recompensa")
         self.guardar_estado()
+
+    def insertar_comando_ui(self, comando):
+        """La paleta de comandos escribe en la consola sin ejecutarlo."""
+        if self.estado != "CONSOLA" or not comando:
+            return
+        texto = " ".join(str(comando).split())
+        if not texto:
+            return
+        self.buffer = texto
+        self.hist_pos = None
+        window.eco_write("\r\x1b[K" + self.texto_prompt() + texto)
 
     # ----------------------------------------------------------
     # verbos de exploración
@@ -523,19 +570,22 @@ class Juego:
             self.mirar_nodo()
         elif self.lugar == "claro":
             self.mirar_claro()
-        else:
+        elif self.lugar == "biblioteca":
             self.mirar_biblioteca()
+        else:
+            self.mirar_marte()
 
     def mirar_nodo(self):
-        self.escribir("mirás alrededor. la consola dibuja el tablero:", "exito")
-        self.escribir("  [nodo] ── [ ? ] ── [ ··· ]", "eco")
+        self.escribir("mirás alrededor. la consola devuelve las señales que ya reconocés:", "exito")
+        conocidas = self._estado_publico()["ubicaciones_abiertas"]
+        self.escribir("  " + " · ".join(NOMBRES_LUGAR[lugar] for lugar in conocidas), "eco")
         self.escribir("")
         if self.banderas.get("claro_visitado"):
             self.escribir("la casilla conocida vuelve a respirar. otra quedó debajo del ruido.", "sistema")
             self.escribir("F2 para ver el tablero. 'cruzar' también sigue funcionando.", "tenue")
             return
         if "esperar" not in self.verbos:
-            self.escribir("algo pulsa detrás de la ruta. no responde a la velocidad.", "sistema")
+            self.escribir("algo pulsa detrás del ruido. no responde a la velocidad.", "sistema")
             self.escribir("el borde de la consola tiembla una vez.", "tenue")
             window.eco_pulso("cerca", 0)
             self.desbloquear("esperar")
@@ -554,6 +604,9 @@ class Juego:
         if self.lugar == "biblioteca":
             self.escribir("esperás. los registros no cambian de orden por sí solos.", "sistema")
             return
+        if self.lugar == "marte":
+            self.escribir("esperás. las órbitas siguen su curso aunque la consola calle.", "sistema")
+            return
         if self.banderas.get("claro_visitado"):
             self.banderas["esperas"] = self.banderas.get("esperas", 0) + 1
             self.escribir("esperás. el primer cruce ya conoce tu paso.", "sistema")
@@ -564,7 +617,7 @@ class Juego:
         hasta = float(self.banderas.get("ventana_hasta", 0) or 0)
         if hasta > ahora:
             self.escribir("el intervalo sigue abierto.", "exito")
-            self.escribir("la ruta no necesita otra señal todavía.", "tenue")
+            self.escribir("la señal no necesita otra todavía.", "tenue")
             return
 
         self.banderas["esperas"] = self.banderas.get("esperas", 0) + 1
@@ -573,15 +626,15 @@ class Juego:
         self.escribir("contás el ruido de fondo. uno. dos. ...", "tenue")
         if "cruzar" not in self.verbos:
             self.desbloquear("cruzar")
-        self.escribir("el pulso se abre: hay quince segundos de ruta viva.", "exito")
-        self.escribir("cruzá ahora o elegí la casilla iluminada en F2.", "sistema")
+        self.escribir("el pulso se abre: quedan quince segundos para entrar.", "exito")
+        self.escribir("cruzá ahora o elegí el lugar iluminado en F2.", "sistema")
         window.eco_pulso("ventana", DURACION_PULSO_MS)
         self.guardar_estado()
 
     def verbo_cruzar(self):
         if self.lugar == "nodo":
             if "cruzar" not in self.verbos:
-                self.escribir("el camino está dibujado, pero todavía no sabés cruzarlo.", "sistema")
+                self.escribir("la señal está ahí, pero todavía no aprendiste a cruzar.", "sistema")
                 return
             if not self.banderas.get("claro_visitado"):
                 hasta = float(self.banderas.get("ventana_hasta", 0) or 0)
@@ -596,7 +649,7 @@ class Juego:
                 self.banderas["ventana_hasta"] = 0
             self.lugar = "claro"
             self.escribir("cruzás.", "exito")
-            self.escribir("la mitad del camino tiene otra presión.")
+            self.escribir("la presión cambia al cruzar.")
             self.escribir("")
             self.introducir_lugar("claro")
             self.guardar_estado()
@@ -699,7 +752,7 @@ class Juego:
         self.escribir("el nodo se estabilizó.", "exito")
         self.escribir("resonancia +03 eco.", "eco")
         self.escribir("el gabinete recibió una palabra: preguntar · 02 eco.", "sistema")
-        self.escribir("en el tablero, debajo de la ruta, algo respondió.", "tenue")
+        self.escribir("el tablero anotó una señal que todavía no sabe nombrar.", "tenue")
         self.desbloquear("recordar")
         window.eco_evento("recompensa")
         window.eco_pulso("eco", 0)
@@ -709,7 +762,14 @@ class Juego:
         self.escribir("mirás la biblioteca. los estantes están vacíos salvo por tres fichas.", "exito")
         if "biblioteca" in self.mundos:
             self.escribir("la secuencia reconstruida quedó guardada en el archivo.", "sistema")
-            self.escribir("algo al fondo no pertenece a esta sala.", "tenue")
+            if not self.banderas.get("ruta_marte"):
+                self.escribir("en el margen: ETRAM. una palabra conocida, escrita en sentido contrario.", "eco")
+                if "descifrar" in self.verbos:
+                    self.escribir("la consola acepta: descifrar [texto].", "sistema")
+                else:
+                    self.escribir("el gabinete quizá tenga una forma de leer lo invertido.", "tenue")
+            else:
+                self.escribir("el borde del papel se quemó en forma de planeta rojo.", "tenue")
             return
         pistas = self.banderas.get("pistas_biblioteca", [])
         self.escribir(f"registros preguntados: {len(set(pistas))}/3.", "tenue")
@@ -719,13 +779,17 @@ class Juego:
         else:
             progreso = int(self.banderas.get("puzzle_biblioteca", 0))
             self.escribir(f"secuencia propuesta: {progreso}/3 fichas colocadas.", "sistema")
+            self.escribir("cuando tengas un orden, tocá las fichas de a una.", "tenue")
 
     def verbo_preguntar(self, resto):
+        if self.lugar == "marte":
+            self.preguntar_marte(resto)
+            return
         if self.lugar != "biblioteca":
             self.escribir("la pregunta sale de la consola, pero no encuentra a quién llegar.", "sistema")
             return
         if "biblioteca" in self.mundos:
-            self.escribir("la biblioteca ya respondió. el eco guardó la respuesta.", "sistema")
+            self.escribir("la biblioteca ya respondió. la nueva señal pide otra palabra.", "sistema")
             return
         if not resto:
             pistas = self.banderas.get("pistas_biblioteca", [])
@@ -735,6 +799,7 @@ class Juego:
                 self.escribir("preguntar agua / preguntar semilla / preguntar eco", "tenue")
             else:
                 self.escribir("las tres condiciones ya están en el log. la máquina no las va a ordenar.", "sistema")
+                self.escribir("ahora podés tocar las fichas según lo que dedujiste.", "sistema")
             return
 
         objetivo = resto[0]
@@ -754,9 +819,27 @@ class Juego:
             pistas.append(objetivo)
         self.escribir(f"preguntás por {objetivo}.", "exito")
         self.escribir(condiciones[objetivo], "sistema")
-        self.escribir(f"tres condiciones. ¿qué pieza tiene que ir primero? ({len(set(pistas))}/3)", "tenue")
+        leidos = len(set(pistas))
+        self.escribir(f"condiciones reunidas: {leidos}/3.", "tenue")
+        if leidos == 3:
+            self.escribir("cuando el orden te cierre, tocá las fichas una por una.", "sistema")
         self.guardar_estado()
         window.eco_pulso("cerca", 0)
+
+    def preguntar_marte(self, resto):
+        if "marte" in self.mundos:
+            self.escribir("el planetario ya registró la secuencia.", "sistema")
+            return
+        if not resto:
+            self.escribir("la transmisión responde sobre el Sol o las órbitas.", "tenue")
+            return
+        tema = resto[0]
+        if tema in ("sol", "órbita", "orbitas", "orden", "planetas"):
+            self.escribir("Mercurio es el planeta más cercano al Sol.", "sistema")
+            self.escribir("la Tierra queda entre Venus y Marte.", "sistema")
+            self.escribir("el resto lo decide tu memoria.", "tenue")
+        else:
+            self.escribir("la señal no reconoce esa pregunta todavía.", "tenue")
 
     def tocar_biblioteca(self, objeto):
         if "biblioteca" in self.mundos:
@@ -803,6 +886,88 @@ class Juego:
         self.escribir("resonancia +04 eco.", "eco")
         self.escribir("un archivo nuevo quedó esperando en el compartimento 03.", "sistema")
         self.escribir("la máquina oyó otra señal. todavía no sabe cómo llamarla.", "tenue")
+        self.escribir("en el margen quedó ETRAM. la palabra parece conocida, aunque venga al revés.", "eco")
+        self.escribir("el gabinete recibió una nueva frecuencia.", "tenue")
+        window.eco_evento("recompensa")
+        window.eco_pulso("eco", 0)
+        self.guardar_estado()
+
+    def verbo_descifrar(self, resto):
+        if "biblioteca" not in self.mundos:
+            self.escribir("todavía no hay suficientes registros para leer el margen.", "sistema")
+            return
+        if not resto:
+            self.escribir("la consola necesita una cadena. el margen conserva cuatro letras.", "sistema")
+            return
+        cadena = "".join(resto).strip().upper()
+        if cadena == "MARTE":
+            self.escribir("la palabra ya se puede leer. el registro, no.", "tenue")
+            self.escribir("probá desde el otro extremo.", "sistema")
+            return
+        if cadena != "ETRAM":
+            self.escribir("la cadena no encontró una órbita.", "error")
+            self.escribir("la nota sigue al revés, en la biblioteca.", "tenue")
+            return
+        if self.banderas.get("ruta_marte"):
+            self.escribir("Marte ya aparece en el tablero. el punto rojo no se mueve.", "tenue")
+            return
+        self.banderas["ruta_marte"] = True
+        self.escribir("la cadena invierte su dirección: MARTE.", "exito")
+        self.escribir("un punto rojo apareció en la cartografía, sin advertencia.", "sistema")
+        self.desbloquear("ordenar")
+        window.eco_evento("transito")
+        self.guardar_estado()
+
+    def mirar_marte(self):
+        self.escribir("mirás el planetario. cuatro tarjetas tiemblan dentro de sus órbitas.", "exito")
+        if "marte" in self.mundos:
+            self.escribir("la fila solar sigue girando en el archivo.", "sistema")
+            self.escribir("más allá, el ruido todavía no tiene país.", "tenue")
+            return
+        self.escribir("marte · venus · mercurio · tierra", "eco")
+        self.escribir("la indicación es simple: ordená desde el Sol hacia afuera.", "sistema")
+        self.escribir("Mercurio abre la órbita; el planeta rojo queda en la cuarta.", "tenue")
+        progreso = int(self.banderas.get("puzzle_marte", 0))
+        self.escribir(f"órbitas sincronizadas: {progreso}/4.", "tenue")
+        self.escribir("usar: ordenar [los cuatro nombres]", "sistema")
+
+    def verbo_ordenar(self, resto):
+        if self.lugar != "marte":
+            self.escribir("no hay órbitas que ordenar en esta coordenada.", "sistema")
+            return
+        if "marte" in self.mundos:
+            self.escribir("el planetario conserva la fila que armaste.", "tenue")
+            return
+        nombres = ["".join(char for char in palabra if char.isalpha()) for palabra in resto]
+        if len(nombres) != 4:
+            self.escribir("faltan tarjetas. hay cuatro órbitas y cuatro nombres.", "sistema")
+            self.escribir("la orientación va desde el Sol hacia afuera.", "tenue")
+            return
+        if nombres != ORDEN_MARTE:
+            intentos = int(self.banderas.get("intentos_marte", 0)) + 1
+            self.banderas["intentos_marte"] = intentos
+            self.escribir("las órbitas no aceptan esa disposición.", "error")
+            if intentos >= 2:
+                self.escribir("recordá: Mercurio queda más cerca del Sol; Marte es el planeta rojo.", "sistema")
+            else:
+                self.escribir("el panel conserva los cuatro nombres. podés probar otra vez.", "tenue")
+            self.guardar_estado()
+            return
+        self.banderas["puzzle_marte"] = 4
+        self.escribir("las cuatro tarjetas encajan. el planetario deja de temblar.", "exito")
+        self.completar_marte()
+
+    def completar_marte(self):
+        if "marte" not in self.mundos:
+            self.mundos.append("marte")
+        if not self.banderas.get("recompensa_marte"):
+            self.eco += 5
+            self.banderas["recompensa_marte"] = True
+        if "eco_mundo_03.txt" not in self.salidas:
+            self.salidas.append("eco_mundo_03.txt")
+        self.escribir("Marte estabilizó su órbita.", "exito")
+        self.escribir("resonancia +05 eco.", "eco")
+        self.escribir("el archivo guardó una forma más precisa del cielo.", "sistema")
         window.eco_evento("recompensa")
         window.eco_pulso("eco", 0)
         self.guardar_estado()
